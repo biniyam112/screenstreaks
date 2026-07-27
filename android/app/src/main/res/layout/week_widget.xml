@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="16dp">
+
+    <!-- Header: streak count -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔥"
+            android:textSize="18sp"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/streak_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0"
+            android:textColor="#FFF4F4F6"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginEnd="6dp" />
+
+        <TextView
+            android:id="@+id/streak_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="day streak"
+            android:textColor="#FF9A9AA4"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Row of 7 day chips -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="7">
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter0" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile0" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter1" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile1" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter2" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile2" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter3" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile3" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter4" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile4" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter5" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile5" style="@style/WidgetTile" />
+        </LinearLayout>
+
+        <LinearLayout style="@style/WidgetDayColumn">
+            <TextView android:id="@+id/letter6" style="@style/WidgetDayLetter" />
+            <ImageView android:id="@+id/tile6" style="@style/WidgetTile" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
