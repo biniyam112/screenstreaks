@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config.dart';
 import 'local_store.dart';
+import 'local_repository.dart';
 import 'offline_repository.dart';
 import 'repository.dart';
 import 'supabase_repository.dart';
@@ -13,9 +14,7 @@ import 'supabase_repository.dart';
 /// Throws if backend is not configured.
 Future<Repository> createRepository() async {
   if (!AppConfig.hasBackend) {
-    throw Exception(
-      'Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY via --dart-define',
-    );
+    return LocalRepository();
   }
 
   await Supabase.initialize(

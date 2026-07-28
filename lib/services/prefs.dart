@@ -10,6 +10,7 @@ class Prefs {
   static const _kOnboarded = 'onboarded';
   static const _kGoalMinutes = 'goal_minutes';
   static const _kNotifEnabled = 'notif_enabled';
+  static const _kGroupLimit = 'group_limit_minutes';
 
   // Per-day guard so each threshold alert fires at most once.
   static const _kNotifDate = 'notif_date';
@@ -29,6 +30,13 @@ class Prefs {
 
   static Future<void> setGoalMinutes(int m) async =>
       (await SharedPreferences.getInstance()).setInt(_kGoalMinutes, m);
+
+  /// Shared group limit in minutes. Null until the group sets one.
+  static Future<int?> groupLimitMinutes() async =>
+      (await SharedPreferences.getInstance()).getInt(_kGroupLimit);
+
+  static Future<void> setGroupLimitMinutes(int m) async =>
+      (await SharedPreferences.getInstance()).setInt(_kGroupLimit, m);
 
   static Future<bool> notificationsEnabled() async =>
       (await SharedPreferences.getInstance()).getBool(_kNotifEnabled) ?? true;

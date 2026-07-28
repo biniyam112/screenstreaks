@@ -11,6 +11,7 @@ import 'screens/profile_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'services/prefs.dart';
 import 'theme_provider.dart';
+import 'screens/leaderboard_screen.dart';
 
 /// Exposes sign-out to descendant screens (e.g. SettingsScreen).
 class AuthScope extends InheritedWidget {
@@ -146,6 +147,7 @@ class _RootShellState extends State<RootShell> {
       const FeedScreen(),
       const FriendsScreen(),
       const AccountScreen(),
+const LeaderboardScreen(),
     ];
 
     return Scaffold(
@@ -168,6 +170,7 @@ class _RootShellState extends State<RootShell> {
             _navItem(context, IconsaxPlusBold.heart, 'Feed', const Color(0xFFEC4899)),
             _navItem(context, IconsaxPlusBold.profile_2user, 'Friends', AppColors.info),
             _navItem(context, IconsaxPlusBold.user, 'Profile', const Color(0xFF8B5CF6)),
+_navItem(context, IconsaxPlusBold.ranking_1, 'Ranks', AppColors.primary),
           ],
         ),
       ),
