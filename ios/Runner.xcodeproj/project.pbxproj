@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 70;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -110,14 +110,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4608B935301A4A1E00A57BC7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		4608B935301A4A1E00A57BC7 /* Exceptions for "StreaksMonitor" folder in "StreaksMonitor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
 			target = 4608B926301A4A1D00A57BC7 /* StreaksMonitor */;
 		};
-		46B9910430195690006F2590 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		46B9910430195690006F2590 /* Exceptions for "StreaksWidget" folder in "StreaksWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -127,9 +127,41 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		4608B92A301A4A1D00A57BC7 /* StreaksMonitor */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (4608B935301A4A1E00A57BC7 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = StreaksMonitor; sourceTree = "<group>"; };
-		4610D6F8301917F200C2E915 /* StreaksWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = StreaksWidget; sourceTree = "<group>"; };
-		46B990F43019568D006F2590 /* StreaksWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (46B9910430195690006F2590 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = StreaksWidget; sourceTree = "<group>"; };
+		4608B92A301A4A1D00A57BC7 /* StreaksMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4608B935301A4A1E00A57BC7 /* Exceptions for "StreaksMonitor" folder in "StreaksMonitor" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = StreaksMonitor;
+			sourceTree = "<group>";
+		};
+		4610D6F8301917F200C2E915 /* StreaksWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = StreaksWidget;
+			sourceTree = "<group>";
+		};
+		46B990F43019568D006F2590 /* StreaksWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				46B9910430195690006F2590 /* Exceptions for "StreaksWidget" folder in "StreaksWidgetExtension" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = StreaksWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -297,8 +329,6 @@
 				4608B92A301A4A1D00A57BC7 /* StreaksMonitor */,
 			);
 			name = StreaksMonitor;
-			packageProductDependencies = (
-			);
 			productName = StreaksMonitor;
 			productReference = 4608B927301A4A1D00A57BC7 /* StreaksMonitor.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -319,8 +349,6 @@
 				46B990F43019568D006F2590 /* StreaksWidget */,
 			);
 			name = StreaksWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = StreaksWidgetExtension;
 			productReference = 46B990F13019568D006F2590 /* StreaksWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -390,7 +418,7 @@
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
-				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */,
+				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */,
 			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
@@ -501,13 +529,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -1202,7 +1226,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */ = {
+		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
 		};

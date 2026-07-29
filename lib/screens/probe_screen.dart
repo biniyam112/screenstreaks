@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/prefs.dart';
 import '../theme.dart';
 
 /// Temporary diagnostic: does iOS fire eventDidReachThreshold honestly on
@@ -26,6 +27,11 @@ class _ProbeScreenState extends State<ProbeScreen> {
     } on PlatformException catch (e) {
       setState(() => _status = '$method failed: ${e.code} ${e.message}');
     }
+  }
+
+  Future<void> _startWithMyLimit() async {
+    final minutes = await Prefs.goalMinutes();
+    await _call('startProbe', minutes);
   }
 
   Future<void> _refreshLog() async {
@@ -66,7 +72,7 @@ class _ProbeScreenState extends State<ProbeScreen> {
             const SizedBox(height: 18),
             _btn('1 · Request authorization', () => _call('authorize')),
             _btn('2 · Pick apps to count', () => _call('pickApps')),
-            _btn('3 · Start probe (2 min)', () => _call('startProbe', 2)),
+            _btn('3 · Start monitoring (my limit)', _startWithMyLimit),
             _btn('Refresh log', _refreshLog),
             _btn('Clear log', () async {
               await _call('clearLog');

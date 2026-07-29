@@ -87,6 +87,46 @@ enum ScreenTimeProbe {
                                         message: "\(error)", details: nil))
                 }
 
+            case "hasSelection":
+                let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
+                result(data != nil)
+
+            case "activeLimit":
+                result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
+
+            case "readPending":
+                result(UserDefaults(suiteName: suite)?
+                    .dictionary(forKey: "pending_outcomes") ?? [:])
+
+            case "clearPending":
+                let days = (call.arguments as? [String]) ?? []
+                let defaults = UserDefaults(suiteName: suite)
+                var pending = defaults?.dictionary(forKey: "pending_outcomes")
+                    as? [String: Bool] ?? [:]
+                for day in days { pending.removeValue(forKey: day) }
+                defaults?.set(pending, forKey: "pending_outcomes")
+                result("cleared \(days.count)")
+
+            case "hasSelection":
+                let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
+                result(data != nil)
+
+            case "activeLimit":
+                result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
+
+            case "readPending":
+                result(UserDefaults(suiteName: suite)?
+                    .dictionary(forKey: "pending_outcomes") ?? [:])
+
+            case "clearPending":
+                let days = (call.arguments as? [String]) ?? []
+                let defaults = UserDefaults(suiteName: suite)
+                var pending = defaults?.dictionary(forKey: "pending_outcomes")
+                    as? [String: Bool] ?? [:]
+                for day in days { pending.removeValue(forKey: day) }
+                defaults?.set(pending, forKey: "pending_outcomes")
+                result("cleared \(days.count)")
+
             case "readLog":
                 result(UserDefaults(suiteName: suite)?
                     .stringArray(forKey: "probe_log") ?? [])
@@ -113,16 +153,13 @@ enum ScreenTimeProbe {
             selection = decoded
         }
 
-        // Start a minute out so earlier usage today can't trigger it — a
-        // schedule the system reads as already underway is one documented
-        // cause of instant false thresholds.
-        let cal = Calendar.current
-        let startAt = cal.date(byAdding: .minute, value: 1, to: Date())!
-
+        // Full day, repeating. Because the interval is already underway when
+        // monitoring starts mid-day, usage accrued earlier today counts toward
+        // the threshold — which is what we want: if they're already over, say so.
         let schedule = DeviceActivitySchedule(
-            intervalStart: cal.dateComponents([.hour, .minute], from: startAt),
+            intervalStart: DateComponents(hour: 0, minute: 0),
             intervalEnd: DateComponents(hour: 23, minute: 59),
-            repeats: false
+            repeats: true
         )
 
         let activityEvent = DeviceActivityEvent(
@@ -136,5 +173,6 @@ enum ScreenTimeProbe {
         center.stopMonitoring([activity])
         try center.startMonitoring(activity, during: schedule,
                                    events: [eventName: activityEvent])
+        UserDefaults(suiteName: suite)?.set(thresholdMinutes, forKey: "active_limit")
     }
 }
