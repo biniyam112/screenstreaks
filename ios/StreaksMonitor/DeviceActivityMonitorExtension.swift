@@ -36,6 +36,13 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+        // stopMonitoring() also triggers this callback, so ignore any end that
+        // arrives before the day is genuinely over.
+        let hour = Calendar.current.component(.hour, from: Date())
+        guard hour >= 23 || hour == 0 else {
+            log("interval ended early (ignored)")
+            return
+        }
         record(true, for: todayKey)
         log("day ended — under limit")
     }
