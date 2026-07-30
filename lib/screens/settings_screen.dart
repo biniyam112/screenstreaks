@@ -47,14 +47,15 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _load() async {
-    final repo = RepoScope.of(context);
-    final me = await repo.me();
     final notif = await Prefs.notificationsEnabled();
     final perm = await UsageService.hasPermission();
+    // Prefs survives restarts; LocalRepository doesn't. Prefer the persisted
+    // value so the UI matches what monitoring actually uses.
+    final savedGoal = await Prefs.goalMinutes();
     if (!mounted) return;
     setState(() {
-      _goal = me.dailyLimitMinutes;
-      _savedGoal = me.dailyLimitMinutes;
+      _goal = savedGoal;
+      _savedGoal = savedGoal;
       _notif = notif;
       _hasPermission = perm;
       _loaded = true;

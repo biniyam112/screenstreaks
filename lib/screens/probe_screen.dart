@@ -73,6 +73,7 @@ class _ProbeScreenState extends State<ProbeScreen> {
             _btn('1 · Request authorization', () => _call('authorize')),
             _btn('2 · Pick apps to count', () => _call('pickApps')),
             _btn('3 · Start monitoring (my limit)', _startWithMyLimit),
+            _btn('TEST · Start at 2 min', () => _call('startProbe', 2)),
             _btn('Refresh log', _refreshLog),
             _btn('Clear log', () async {
               await _call('clearLog');

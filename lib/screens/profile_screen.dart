@@ -15,6 +15,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../widgets/profile_view.dart';
 import 'friend_detail_screen.dart';
+import '../services/screen_time.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Profile? _me;
   List<Profile> _friends = [];
   bool _loading = true;
+  bool _monitoring = false;
 
   @override
   void initState() {
@@ -57,12 +59,18 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Future<void> _load() async {
     final repo = RepoScope.of(context);
     await _autoCheckInAndroid(repo);
+    await _drainScreenTime(repo);
     try {
       final me = await repo.me();
       final friends = await repo.friends();
+      final savedGoal = await Prefs.goalMinutes();
+      final monitoring = (await ScreenTime.activeLimit()) > 0;
       if (!mounted) return;
       setState(() {
-        _me = me;
+        _monitoring = monitoring;
+        _me = me.dailyLimitMinutes == savedGoal
+            ? me
+            : me.copyWith(dailyLimitMinutes: savedGoal);
         _friends = friends;
         _loading = false;
       });
@@ -74,6 +82,32 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // of an endless spinner.
       if (!mounted) return;
       setState(() => _loading = false);
+    }
+  }
+
+  /// Turns outcomes recorded by the iOS monitor extension into check-ins.
+  /// Safe to re-run — checkIn replaces any record for the same day.
+  Future<void> _drainScreenTime(Repository repo) async {
+    if (!ScreenTime.supported) return;
+    try {
+      final pending = await ScreenTime.pendingOutcomes();
+      if (pending.isEmpty) return;
+      final limit = await Prefs.goalMinutes();
+      final consumed = <String>[];
+      for (final entry in pending.entries) {
+        final day = ScreenTime.parseDay(entry.key);
+        if (day == null) continue;
+        await repo.checkIn(
+          day: day,
+          limitMet: entry.value,
+          limitMinutes: limit,
+          source: 'auto',
+        );
+        consumed.add(entry.key);
+      }
+      await ScreenTime.clearPending(consumed);
+    } catch (_) {
+      // Never let a drain failure block loading.
     }
   }
 
@@ -151,7 +185,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     profile: _me!,
                     showIdentity: false,
                     showLiveUsage: Platform.isAndroid,
-                    checkInControls: Platform.isAndroid
+                    checkInControls: Platform.isAndroid || _monitoring
                         ? null
                         : _CheckInButtons(profile: _me!, onChanged: _load),
                     footer: _FriendsPreview(friends: _friends, onSeeAll: widget.onSeeFriends),
