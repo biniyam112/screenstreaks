@@ -8,6 +8,7 @@ import '../main_app.dart' show AuthScope;
 import '../models/models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'friends_screen.dart';
 import 'settings_screen.dart';
 
 /// The "Profile" tab: the user's own identity — avatar, editable display name,
@@ -110,6 +111,20 @@ class _AccountScreenState extends State<AccountScreen> {
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
+                        _Tile(
+                          icon: IconsaxPlusBold.profile_2user,
+                          iconColor: AppColors.info,
+                          label: 'Friends',
+                          subtitle: 'Your accountability circle',
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const FriendsScreen()),
+                            );
+                            _load();
+                          },
+                        ),
+                        Divider(height: 1, color: context.cDivider),
                         _Tile(
                           icon: IconsaxPlusBold.setting_2,
                           iconColor: AppColors.info,

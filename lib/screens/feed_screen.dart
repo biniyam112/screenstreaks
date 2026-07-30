@@ -133,7 +133,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                         physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        separatorBuilder: (_, __) => const SizedBox(height: 20),
                         itemBuilder: (_, i) => _FeedCard(
                           item: _items[i],
                           onCelebrate: () => _celebrate(_items[i]),
@@ -174,7 +174,28 @@ class _FeedCard extends StatelessWidget {
   String get _title => switch (item.kind) {
     'streak' => 'Reached a ${item.milestone}-day streak!',
     'friend_streak' => 'Reached a ${item.milestone}-day friend streak!',
+    'perfect_week' => 'A perfect week — seven for seven.',
+    'comeback' => 'Back on it. ${item.milestone} days since the reset.',
+    'personal_best' => 'New personal best: ${item.milestone} days.',
+    'total_days' => '${item.milestone}th day under the limit, all time.',
+    'rare_air' => 'Held a limit only ${item.milestone}% of people keep.',
     _ => 'Hit a new milestone!',
+  };
+
+  String get _badge => switch (item.kind) {
+    'perfect_week' => '\u2705',
+    'comeback' => '\u267B\uFE0F',
+    'personal_best' => '\uD83C\uDFC6',
+    'total_days' => '\uD83D\uDCAF',
+    'rare_air' => '\uD83D\uDC8E',
+    _ => '\uD83D\uDD25',
+  };
+
+  Color get _badgeTint => switch (item.kind) {
+    'perfect_week' => AppColors.primary,
+    'personal_best' => AppColors.info,
+    'rare_air' => const Color(0xFF8B5CF6),
+    _ => AppColors.accent,
   };
 
   /// Header line: for a friend streak it names both people ("You & Maya").
@@ -251,10 +272,10 @@ class _FeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: context.cSurface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: context.cDivider),
       ),
       child: Column(
@@ -302,10 +323,10 @@ class _FeedCard extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.14),
+                  color: _badgeTint.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
-                child: const Text('🔥', style: TextStyle(fontSize: 22)),
+                child: Text(_badge, style: const TextStyle(fontSize: 22)),
               ),
             ],
           ),

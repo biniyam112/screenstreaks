@@ -38,6 +38,20 @@ class Prefs {
   static Future<void> setGroupLimitMinutes(int m) async =>
       (await SharedPreferences.getInstance()).setInt(_kGroupLimit, m);
 
+  /// Per-group limit in minutes. Null until that group sets one.
+  static Future<int?> groupLimit(String groupId) async =>
+      (await SharedPreferences.getInstance()).getInt('group_limit_$groupId');
+
+  static Future<void> setGroupLimit(String groupId, int m) async =>
+      (await SharedPreferences.getInstance()).setInt('group_limit_$groupId', m);
+
+  /// Which group the home-screen widget shows.
+  static Future<String?> widgetGroupId() async =>
+      (await SharedPreferences.getInstance()).getString('widget_group');
+
+  static Future<void> setWidgetGroupId(String id) async =>
+      (await SharedPreferences.getInstance()).setString('widget_group', id);
+
   static Future<bool> notificationsEnabled() async =>
       (await SharedPreferences.getInstance()).getBool(_kNotifEnabled) ?? true;
 

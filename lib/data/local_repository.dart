@@ -2,16 +2,17 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../config.dart';
+import '../models/group.dart';
 import '../models/models.dart';
 import 'repository.dart';
 
 /// In-memory demo backend so the full app is usable without Supabase.
 /// Seeds "you" plus a few friends with realistic hit/miss histories.
 class LocalRepository implements Repository {
-  LocalRepository();
+  LocalRepository({int myLimit = 120}) : _myLimit = myLimit;
 
   bool _signedIn = true; // demo mode: treat as already signed in
-  int _myLimit = 120;
+  int _myLimit;
 
   late final Map<String, Profile> _people = _seed();
 
@@ -113,10 +114,111 @@ class LocalRepository implements Repository {
   String shareLink(String code) => '${AppConfig.shareLinkBase}$code';
 
   @override
-  Future<List<FeedItem>> feed() async => const [];
+  Future<List<FeedItem>> feed() async => _feedSeed
+      .map((e) => e.copyWith(
+            iCelebrated: _celebrated.contains(e.id),
+            celebrateCount: e.celebrateCount + (_boost[e.id] ?? 0),
+          ))
+      .toList();
+
+  final Set<String> _celebrated = {};
+  final Map<String, int> _boost = {};
+
+  late final List<FeedItem> _feedSeed = _makeFeed();
+
+  /// Milestones derived from the seeded histories, so the feed matches the
+  /// streaks shown elsewhere instead of being invented separately.
+  List<FeedItem> _makeFeed() {
+    const runMarks = [3, 7, 14, 21, 30];
+    const totalMarks = [25, 50, 100];
+    final items = <FeedItem>[];
+    var n = 0;
+
+    FeedItem make(Profile p, String kind, int value, DateTime day) {
+      n++;
+      return FeedItem(
+        id: 'demo-${p.id}-$kind-$value',
+        userId: p.id,
+        displayName: p.displayName,
+        kind: kind,
+        milestone: value,
+        createdAt: day.add(Duration(hours: 9 + (n % 12))),
+        celebrateCount: (value * 2 + n * 3) % 9,
+        iCelebrated: false,
+        commentCount: n % 4,
+        viewerIsOwner: p.isMe,
+        viewerIsParticipant: p.isMe,
+      );
+    }
+
+    final monday = DateTime(2020, 1, 6);
+
+    for (final p in _people.values) {
+      final days = p.records.map((r) => dateOnly(r.day)).toList()..sort();
+      final map = p.byDay;
+      final weekMet = <int, int>{};
+      final weekLast = <int, DateTime>{};
+
+      var run = 0, best = 0, met = 0, prevRun = 0;
+      var didComeback = false, didBest = false, didRare = false;
+      DateTime? prev;
+
+      for (final day in days) {
+        final ok = map[day]?.limitMet == true;
+        final wk = day.difference(monday).inDays ~/ 7;
+        weekLast[wk] = day;
+        if (ok) weekMet[wk] = (weekMet[wk] ?? 0) + 1;
+
+        if (!ok) {
+          prevRun = run;
+          run = 0;
+          prev = day;
+          continue;
+        }
+
+        met++;
+        run = (prev != null && day.difference(prev).inDays == 1) ? run + 1 : 1;
+        prev = day;
+
+        if (runMarks.contains(run)) items.add(make(p, 'streak', run, day));
+        if (totalMarks.contains(met)) items.add(make(p, 'total_days', met, day));
+
+        if (!didComeback && run == 3 && prevRun >= 3) {
+          items.add(make(p, 'comeback', run, day));
+          didComeback = true;
+        }
+        if (!didBest && best >= 7 && run == best + 1) {
+          items.add(make(p, 'personal_best', run, day));
+          didBest = true;
+        }
+        if (!didRare && run == 7) {
+          final pct = (communityUnderRate(p.dailyLimitMinutes) * 100).round();
+          if (pct <= 35) {
+            items.add(make(p, 'rare_air', pct, day));
+            didRare = true;
+          }
+        }
+        if (run > best) best = run;
+      }
+
+      weekMet.forEach((wk, count) {
+        if (count == 7) {
+          items.add(make(p, 'perfect_week', 7, weekLast[wk]!));
+        }
+      });
+    }
+
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items.take(40).toList();
+  }
 
   @override
-  Future<bool> toggleCelebrate(String eventId) async => false;
+  Future<bool> toggleCelebrate(String eventId) async {
+    final now = !_celebrated.contains(eventId);
+    if (now) { _celebrated.add(eventId); } else { _celebrated.remove(eventId); }
+    _boost[eventId] = (_boost[eventId] ?? 0) + (now ? 1 : -1);
+    return now;
+  }
 
   @override
   Future<List<FeedComment>> comments(String eventId) async => const [];
@@ -126,6 +228,44 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> selectFriend(String targetId) async {}
+
+  @override
+  Future<List<Group>> groups() async => _demoGroups;
+
+  static const _demoGroups = [
+    Group(id: 'work', name: 'Work', memberIds: [
+      'me', 'maya', 'omar', 'priya', 'dan', 'sofia']),
+    Group(id: 'pickleball', name: 'Pickleball', memberIds: [
+      'me', 'leo', 'theo', 'nina', 'marcus', 'yuki']),
+    Group(id: 'family', name: 'Family', memberIds: [
+      'me', 'aisha', 'grace', 'isaac', 'rosa', 'kofi']),
+    Group(id: 'lifemaxxers', name: 'Lifemaxxers', memberIds: [
+      'me', 'jonas', 'amara', 'felix', 'hana', 'tomas']),
+  ];
+
+  /// (id, name, code, colour, seed, limit, metBias)
+  static const List<(String, String, String, int, int, int, double)> _roster = [
+    ('maya', 'Maya Chen', 'MAYA42', 0xFFFF6D3D, 11, 90, 0.85),
+    ('omar', 'Omar Haddad', 'OMAR15', 0xFF0EA5E9, 13, 120, 0.62),
+    ('priya', 'Priya Nair', 'PRIYA8', 0xFFA855F7, 17, 105, 0.78),
+    ('dan', 'Dan Kovacs', 'DANK21', 0xFF14B8A6, 19, 180, 0.44),
+    ('sofia', 'Sofia Reyes', 'SOFIA3', 0xFFF43F5E, 23, 135, 0.71),
+    ('leo', 'Leo Martins', 'LEO777', 0xFF2563EB, 29, 150, 0.55),
+    ('theo', 'Theo Brandt', 'THEO44', 0xFFEAB308, 31, 90, 0.81),
+    ('nina', 'Nina Okafor', 'NINA60', 0xFF22C55E, 37, 120, 0.9),
+    ('marcus', 'Marcus Webb', 'MARC12', 0xFF8B5CF6, 41, 210, 0.38),
+    ('yuki', 'Yuki Tanaka', 'YUKI55', 0xFFEC4899, 43, 75, 0.67),
+    ('aisha', 'Aisha Bello', 'AISHA9', 0xFF8B5CF6, 47, 120, 0.68),
+    ('grace', 'Grace Mensah', 'GRACE7', 0xFF06B6D4, 53, 100, 0.74),
+    ('isaac', 'Isaac Cohen', 'ISAAC2', 0xFFF97316, 59, 160, 0.51),
+    ('rosa', 'Rosa Delgado', 'ROSA88', 0xFF84CC16, 61, 110, 0.83),
+    ('kofi', 'Kofi Boateng', 'KOFI30', 0xFF6366F1, 67, 145, 0.59),
+    ('jonas', 'Jonas Lind', 'JONAS1', 0xFF10B981, 71, 60, 0.93),
+    ('amara', 'Amara Diallo', 'AMARA4', 0xFFD946EF, 73, 85, 0.87),
+    ('felix', 'Felix Wu', 'FELIX9', 0xFF3B82F6, 79, 95, 0.76),
+    ('hana', 'Hana Yilmaz', 'HANA23', 0xFFF59E0B, 83, 70, 0.89),
+    ('tomas', 'Tomas Silva', 'TOMAS6', 0xFFEF4444, 89, 200, 0.41),
+  ];
 
   // --------------------------------------------------------------------------
   Map<String, Profile> _seed() {
@@ -140,33 +280,16 @@ class LocalRepository implements Repository {
       metBias: 0.72,
     );
     final friends = [
-      _makeProfile(
-        id: 'maya',
-        name: 'Maya Chen',
-        code: 'MAYA42',
-        color: const Color(0xFFFF6D3D),
-        seed: 11,
-        limit: 90,
-        metBias: 0.85,
-      ),
-      _makeProfile(
-        id: 'leo',
-        name: 'Leo Martins',
-        code: 'LEO777',
-        color: const Color(0xFF2563EB),
-        seed: 23,
-        limit: 150,
-        metBias: 0.55,
-      ),
-      _makeProfile(
-        id: 'aisha',
-        name: 'Aisha Bello',
-        code: 'AISHA9',
-        color: const Color(0xFF8B5CF6),
-        seed: 31,
-        limit: 120,
-        metBias: 0.68,
-      ),
+      for (final f in _roster)
+        _makeProfile(
+          id: f.$1,
+          name: f.$2,
+          code: f.$3,
+          color: Color(f.$4),
+          seed: f.$5,
+          limit: f.$6,
+          metBias: f.$7,
+        ),
     ];
     return {'me': me, for (final f in friends) f.id: f};
   }

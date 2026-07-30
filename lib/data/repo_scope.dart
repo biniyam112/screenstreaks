@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config.dart';
+import '../services/prefs.dart';
 import 'local_store.dart';
 import 'local_repository.dart';
 import 'offline_repository.dart';
@@ -14,7 +15,7 @@ import 'supabase_repository.dart';
 /// Throws if backend is not configured.
 Future<Repository> createRepository() async {
   if (!AppConfig.hasBackend) {
-    return LocalRepository();
+    return LocalRepository(myLimit: await Prefs.goalMinutes());
   }
 
   await Supabase.initialize(

@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       final me = await repo.me();
       final friends = await repo.friends();
       final savedGoal = await Prefs.goalMinutes();
-      final monitoring = (await ScreenTime.activeLimit()) > 0;
+      final monitoring = await _ensureMonitoring(savedGoal);
       if (!mounted) return;
       setState(() {
         _monitoring = monitoring;
@@ -82,6 +82,20 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // of an endless spinner.
       if (!mounted) return;
       setState(() => _loading = false);
+    }
+  }
+
+  /// Keeps the monitor watching the current goal — restarts it when the
+  /// limit changed or monitoring was never started. Returns whether it's on.
+  Future<bool> _ensureMonitoring(int goalMinutes) async {
+    if (!ScreenTime.supported) return false;
+    try {
+      if (!await ScreenTime.hasSelection()) return false;
+      final active = await ScreenTime.activeLimit();
+      if (active == goalMinutes) return true;
+      return await ScreenTime.startMonitoring(goalMinutes);
+    } catch (_) {
+      return false;
     }
   }
 
@@ -212,7 +226,7 @@ class _LoadError extends StatelessWidget {
             Icon(IconsaxPlusLinear.cloud_cross, size: 44, color: context.cTextTer),
             const SizedBox(height: 16),
             Text(
-              "Can't reach Vero",
+              "Can't reach Undr",
               style: appFont(fontSize: 17, fontWeight: FontWeight.w800, color: context.cText),
             ),
             const SizedBox(height: 6),
@@ -491,7 +505,7 @@ void showShareSheet(BuildContext context, Profile me) {
   final repo = RepoScope.of(context);
   final link = repo.shareLink(me.shareCode);
   final inviteMessage =
-      "Let's keep each other under our screen-time limit on Vero 👀\n\n"
+      "Let's keep each other under our screen-time limit on Undr 👀\n\n"
       'Connect with me: $link\n\n'
       'Or enter my code in the app: ${me.shareCode}';
   showModalBottomSheet(

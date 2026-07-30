@@ -1,3 +1,4 @@
+import '../models/group.dart';
 import '../models/models.dart';
 import 'local_store.dart';
 import 'repository.dart';
@@ -204,4 +205,7 @@ class OfflineRepository implements Repository {
       ..sort((a, b) => a.day.compareTo(b.day));
     return p.copyWith(records: records);
   }
+
+  @override
+  Future<List<Group>> groups() => _inner.groups();
 }

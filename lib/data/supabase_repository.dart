@@ -1,6 +1,7 @@
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/group.dart';
 import '../models/models.dart';
 import 'repository.dart';
 
@@ -226,5 +227,14 @@ class SupabaseRepository implements Repository {
           )
           .toList(),
     );
+  }
+
+  @override
+  Future<List<Group>> groups() async {
+    // No group tables yet — treat everyone as one group so screens work.
+    final all = [await me(), ...await friends()];
+    return [
+      Group(id: 'all', name: 'Friends', memberIds: all.map((p) => p.id).toList())
+    ];
   }
 }

@@ -11,8 +11,7 @@ import 'screens/profile_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'services/prefs.dart';
 import 'theme_provider.dart';
-import 'screens/leaderboard_screen.dart';
-import 'screens/probe_screen.dart';
+import 'screens/groups_screen.dart';
 
 /// Exposes sign-out to descendant screens (e.g. SettingsScreen).
 class AuthScope extends InheritedWidget {
@@ -56,7 +55,7 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Vero',
+      title: 'Undr',
       debugShowCheckedModeBanner: false,
       theme: ThemeScope.of(context).currentTheme,
       // AuthScope is injected here — *above* the Navigator — so it's an
@@ -127,7 +126,7 @@ class _OnboardingGateState extends State<_OnboardingGate> {
   }
 }
 
-/// Bottom-nav shell: My streak + Friends.
+/// Bottom-nav shell: My streak, Feed, Groups, Profile.
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -142,14 +141,14 @@ class _RootShellState extends State<RootShell> {
   Widget build(BuildContext context) {
     final pages = [
       ProfileScreen(
-        onSeeFriends: () => setState(() => _index = 2),
+        onSeeFriends: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FriendsScreen()),
+        ),
         onProfile: () => setState(() => _index = 3),
       ),
       const FeedScreen(),
-      const FriendsScreen(),
+      const GroupsScreen(),
       const AccountScreen(),
-      const LeaderboardScreen(),
-      const ProbeScreen(),
     ];
 
     return Scaffold(
@@ -170,10 +169,8 @@ class _RootShellState extends State<RootShell> {
           destinations: [
             _navItem(context, IconsaxPlusBold.flash_1, 'My streak', AppColors.accent),
             _navItem(context, IconsaxPlusBold.heart, 'Feed', const Color(0xFFEC4899)),
-            _navItem(context, IconsaxPlusBold.profile_2user, 'Friends', AppColors.info),
+            _navItem(context, IconsaxPlusBold.people, 'Groups', AppColors.primary),
             _navItem(context, IconsaxPlusBold.user, 'Profile', const Color(0xFF8B5CF6)),
-_navItem(context, IconsaxPlusBold.ranking_1, 'Ranks', AppColors.primary),
-            _navItem(context, IconsaxPlusBold.code_1, 'Probe', AppColors.danger),
           ],
         ),
       ),

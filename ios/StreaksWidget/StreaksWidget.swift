@@ -3,10 +3,14 @@ import SwiftUI
 
 extension Color {
     /// Mirrors AppColors in lib/colors.dart — keep in sync by hand.
+    /// Brand hues read well on both backgrounds, so only the neutrals swap.
     static let brandPrimary = Color(red: 0.063, green: 0.725, blue: 0.506) // #10B981
     static let brandAccent  = Color(red: 0.984, green: 0.549, blue: 0.235) // #FB8C3C
-    static let brandSurface = Color(red: 0.086, green: 0.086, blue: 0.098) // #161619
-    static let brandText    = Color(red: 0.957, green: 0.957, blue: 0.965) // #F4F4F6
+
+    static let surfaceDark  = Color(red: 0.086, green: 0.086, blue: 0.098) // #161619
+    static let surfaceLight = Color(red: 1.0,   green: 1.0,   blue: 1.0)   // #FFFFFF
+    static let textDark     = Color(red: 0.957, green: 0.957, blue: 0.965) // #F4F4F6
+    static let textLight    = Color(red: 0.086, green: 0.086, blue: 0.102) // #16161A
 }
 
 func formatLimit(_ minutes: Int) -> String {
@@ -23,6 +27,7 @@ struct Friend: Codable, Identifiable {
 }
 
 struct GroupInfo: Codable {
+    let name: String?
     let streak: Int
     let limit: Int
 }
@@ -42,7 +47,7 @@ struct Provider: TimelineProvider {
                 Friend(name: "Sam", streak: 5, isMe: false),
                 Friend(name: "Ada", streak: 3, isMe: false),
             ],
-            group: GroupInfo(streak: 12, limit: 180)
+            group: GroupInfo(name: "Work", streak: 12, limit: 180)
         )
     }
 
@@ -78,7 +83,12 @@ struct Provider: TimelineProvider {
 }
 
 struct StreaksWidgetEntryView: View {
+    @Environment(\.colorScheme) var colorScheme
     var entry: StreakEntry
+
+    var isDark: Bool { colorScheme == .dark }
+    var surface: Color { isDark ? .surfaceDark : .surfaceLight }
+    var text: Color { isDark ? .textDark : .textLight }
 
     var body: some View {
         let rows = Array(entry.friends.prefix(3).enumerated())
@@ -88,9 +98,9 @@ struct StreaksWidgetEntryView: View {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 9))
                     .foregroundStyle(Color.brandAccent)
-                Text("DAYS UNDER")
+                Text((entry.group?.name ?? "DAYS UNDR").uppercased())
                     .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(Color.brandText.opacity(0.55))
+                    .foregroundStyle(text.opacity(0.55))
                     .tracking(0.8)
             }
 
@@ -98,7 +108,7 @@ struct StreaksWidgetEntryView: View {
                 Spacer()
                 Text("Open the app to sync")
                     .font(.caption2)
-                    .foregroundStyle(Color.brandText.opacity(0.5))
+                    .foregroundStyle(text.opacity(0.5))
                 Spacer()
             } else {
                 Spacer(minLength: 8)
@@ -111,18 +121,18 @@ struct StreaksWidgetEntryView: View {
 
                         Text(f.name)
                             .font(.system(size: 13, weight: f.isMe ? .heavy : .medium))
-                            .foregroundStyle(f.isMe ? Color.brandPrimary : Color.brandText)
+                            .foregroundStyle(f.isMe ? Color.brandPrimary : text)
                             .lineLimit(1)
 
                         Spacer(minLength: 4)
 
                         Text("\(f.streak)")
                             .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(Color.brandText)
+                            .foregroundStyle(text)
                         Image(systemName: "flame.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(f.streak > 0 ? Color.brandAccent
-                                                          : Color.brandText.opacity(0.3))
+                                                          : text.opacity(0.3))
                     }
                     if i < rows.count - 1 { Spacer(minLength: 2) }
                 }
@@ -130,7 +140,7 @@ struct StreaksWidgetEntryView: View {
                 Spacer(minLength: 8)
 
                 Rectangle()
-                    .fill(Color.brandText.opacity(0.12))
+                    .fill(text.opacity(0.12))
                     .frame(height: 1)
 
                 Spacer(minLength: 8)
@@ -139,11 +149,11 @@ struct StreaksWidgetEntryView: View {
                     HStack(spacing: 5) {
                         Text("GROUP")
                             .font(.system(size: 9, weight: .heavy))
-                            .foregroundStyle(Color.brandText.opacity(0.55))
+                            .foregroundStyle(text.opacity(0.55))
                             .tracking(0.6)
-                        Text("· \(formatLimit(g.limit))")
+                        Text("\(formatLimit(g.limit))")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(Color.brandText.opacity(0.4))
+                            .foregroundStyle(text.opacity(0.4))
 
                         Spacer(minLength: 4)
 
@@ -153,15 +163,23 @@ struct StreaksWidgetEntryView: View {
                         Image(systemName: "flame.fill")
                             .font(.system(size: 11))
                             .foregroundStyle(g.streak > 0 ? Color.brandAccent
-                                                          : Color.brandText.opacity(0.3))
+                                                          : text.opacity(0.3))
                     }
                 } else {
                     Text("No group limit set")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.brandText.opacity(0.4))
+                        .foregroundStyle(text.opacity(0.4))
                 }
             }
         }
+    }
+}
+
+/// Background that follows the system appearance.
+struct ThemedBackground: View {
+    @Environment(\.colorScheme) var colorScheme
+    var body: some View {
+        (colorScheme == .dark ? Color.surfaceDark : Color.surfaceLight)
     }
 }
 
@@ -169,9 +187,9 @@ struct StreaksWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "StreaksWidget", provider: Provider()) { entry in
             StreaksWidgetEntryView(entry: entry)
-                .containerBackground(Color.brandSurface, for: .widget)
+                .containerBackground(for: .widget) { ThemedBackground() }
         }
-        .configurationDisplayName("Streaks")
+        .configurationDisplayName("Undr")
         .description("Your group's streak and the top three.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }

@@ -1,3 +1,4 @@
+import '../models/group.dart';
 import '../models/models.dart';
 
 /// Backend abstraction. Two implementations:
@@ -19,6 +20,15 @@ abstract class Repository {
 
   /// The current user's accountability friends (with history).
   Future<List<Profile>> friends();
+
+  /// Groups the user belongs to. Backends without group support fall back to
+  /// a single group holding everyone, so screens work either way.
+  Future<List<Group>> groups() async {
+    final all = [await me(), ...await friends()];
+    return [
+      Group(id: 'all', name: 'Friends', memberIds: all.map((p) => p.id).toList())
+    ];
+  }
 
   /// A single friend's profile with history.
   Future<Profile> friend(String id);
