@@ -179,6 +179,9 @@ class _FeedCard extends StatelessWidget {
     'personal_best' => 'New personal best: ${item.milestone} days.',
     'total_days' => '${item.milestone}th day under the limit, all time.',
     'rare_air' => 'Held a limit only ${item.milestone}% of people keep.',
+    'weekend' => 'Held the line all weekend.',
+    'improved' => 'Up ${item.milestone} points on last month.',
+    'group_day' => 'Whole group stayed under on the same day.',
     _ => 'Hit a new milestone!',
   };
 
@@ -188,6 +191,9 @@ class _FeedCard extends StatelessWidget {
     'personal_best' => '\uD83C\uDFC6',
     'total_days' => '\uD83D\uDCAF',
     'rare_air' => '\uD83D\uDC8E',
+    'weekend' => '\uD83D\uDEE1\uFE0F',
+    'improved' => '\uD83D\uDCC8',
+    'group_day' => '\uD83E\uDD1D',
     _ => '\uD83D\uDD25',
   };
 
@@ -195,6 +201,9 @@ class _FeedCard extends StatelessWidget {
     'perfect_week' => AppColors.primary,
     'personal_best' => AppColors.info,
     'rare_air' => const Color(0xFF8B5CF6),
+    'weekend' => AppColors.info,
+    'improved' => AppColors.primary,
+    'group_day' => const Color(0xFFEC4899),
     _ => AppColors.accent,
   };
 

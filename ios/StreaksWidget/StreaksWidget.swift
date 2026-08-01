@@ -73,8 +73,7 @@ struct Provider: TimelineProvider {
         var group: GroupInfo? = nil
         if let json = defaults?.string(forKey: "group"),
            let data = json.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode(GroupInfo.self, from: data),
-           decoded.limit > 0 {
+           let decoded = try? JSONDecoder().decode(GroupInfo.self, from: data) {
             group = decoded
         }
 
@@ -84,21 +83,51 @@ struct Provider: TimelineProvider {
 
 struct StreaksWidgetEntryView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.widgetFamily) var family
     var entry: StreakEntry
 
     var isDark: Bool { colorScheme == .dark }
-    var surface: Color { isDark ? .surfaceDark : .surfaceLight }
     var text: Color { isDark ? .textDark : .textLight }
 
+    /// Medium is wide enough for a second column of ranks 4-6.
+    var isWide: Bool { family != .systemSmall }
+    var capacity: Int { isWide ? 6 : 3 }
+
+    func row(_ i: Int, _ f: Friend) -> some View {
+        HStack(spacing: 6) {
+            Text("\(i + 1)")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(i < 3 ? Color.brandPrimary : text.opacity(0.45))
+                .frame(width: 12, alignment: .leading)
+
+            Text(f.name)
+                .font(.system(size: 13, weight: f.isMe ? .heavy : .medium))
+                .foregroundStyle(f.isMe ? Color.brandPrimary : text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: 4)
+
+            Text("\(f.streak)")
+                .font(.system(size: 13, weight: .heavy))
+                .foregroundStyle(text)
+            Image(systemName: "flame.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(f.streak > 0 ? Color.brandAccent : text.opacity(0.3))
+        }
+    }
+
     var body: some View {
-        let rows = Array(entry.friends.prefix(3).enumerated())
+        let shown = Array(entry.friends.prefix(capacity).enumerated())
+        let left = shown.filter { $0.offset < 3 }
+        let right = shown.filter { $0.offset >= 3 }
 
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 4) {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 9))
                     .foregroundStyle(Color.brandAccent)
-                Text((entry.group?.name ?? "DAYS UNDR").uppercased())
+                Text("DAYS UNDR")
                     .font(.system(size: 10, weight: .heavy))
                     .foregroundStyle(text.opacity(0.55))
                     .tracking(0.8)
@@ -112,29 +141,19 @@ struct StreaksWidgetEntryView: View {
                 Spacer()
             } else {
                 Spacer(minLength: 8)
-                ForEach(rows, id: \.element.id) { i, f in
-                    HStack(spacing: 6) {
-                        Text("\(i + 1)")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.brandPrimary)
-                            .frame(width: 12, alignment: .leading)
 
-                        Text(f.name)
-                            .font(.system(size: 13, weight: f.isMe ? .heavy : .medium))
-                            .foregroundStyle(f.isMe ? Color.brandPrimary : text)
-                            .lineLimit(1)
-
-                        Spacer(minLength: 4)
-
-                        Text("\(f.streak)")
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(text)
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(f.streak > 0 ? Color.brandAccent
-                                                          : text.opacity(0.3))
+                HStack(alignment: .top, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        ForEach(left, id: \.element.id) { i, f in row(i, f) }
                     }
-                    if i < rows.count - 1 { Spacer(minLength: 2) }
+                    .frame(maxWidth: .infinity)
+
+                    if isWide && !right.isEmpty {
+                        VStack(alignment: .leading, spacing: 7) {
+                            ForEach(right, id: \.element.id) { i, f in row(i, f) }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
                 }
 
                 Spacer(minLength: 8)
@@ -147,28 +166,35 @@ struct StreaksWidgetEntryView: View {
 
                 if let g = entry.group {
                     HStack(spacing: 5) {
-                        Text("GROUP")
+                        Text((g.name ?? "GROUP").uppercased())
                             .font(.system(size: 9, weight: .heavy))
                             .foregroundStyle(text.opacity(0.55))
                             .tracking(0.6)
-                        Text("\(formatLimit(g.limit))")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(text.opacity(0.4))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+
+                        if g.limit > 0 {
+                            Text(formatLimit(g.limit))
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(text.opacity(0.4))
+                        }
 
                         Spacer(minLength: 4)
 
-                        Text("\(g.streak)")
-                            .font(.system(size: 15, weight: .heavy))
-                            .foregroundStyle(Color.brandPrimary)
-                        Image(systemName: "flame.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(g.streak > 0 ? Color.brandAccent
-                                                          : text.opacity(0.3))
+                        if g.limit > 0 {
+                            Text("\(g.streak)")
+                                .font(.system(size: 15, weight: .heavy))
+                                .foregroundStyle(Color.brandPrimary)
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(g.streak > 0 ? Color.brandAccent
+                                                              : text.opacity(0.3))
+                        } else {
+                            Image(systemName: "nosign")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(text.opacity(0.35))
+                        }
                     }
-                } else {
-                    Text("No group limit set")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(text.opacity(0.4))
                 }
             }
         }

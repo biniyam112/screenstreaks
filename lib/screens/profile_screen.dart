@@ -199,10 +199,10 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     profile: _me!,
                     showIdentity: false,
                     showLiveUsage: Platform.isAndroid,
+                    showProgress: false,
                     checkInControls: Platform.isAndroid || _monitoring
                         ? null
                         : _CheckInButtons(profile: _me!, onChanged: _load),
-                    footer: _FriendsPreview(friends: _friends, onSeeAll: widget.onSeeFriends),
                   ),
                 ),
               ),

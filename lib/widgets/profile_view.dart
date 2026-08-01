@@ -21,6 +21,7 @@ class ProfileView extends StatelessWidget {
     this.footer,
     this.showIdentity = true,
     this.showLiveUsage = false,
+    this.showProgress = true,
   });
 
   final Profile profile;
@@ -35,6 +36,9 @@ class ProfileView extends StatelessWidget {
   /// When true and today's record has exact minutes (Android), the hero shows
   /// a live screen-time gauge instead of the static daily-limit figure.
   final bool showLiveUsage;
+
+  /// The 126-day grid. Off on the home tab so the page fits without scrolling.
+  final bool showProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -53,18 +57,20 @@ class ProfileView extends StatelessWidget {
           title: 'This week',
           child: WeekStrip(profile: profile),
         ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'Progress',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ProgressGrid(profile: profile),
-              const SizedBox(height: 12),
-              const ProgressLegend(),
-            ],
+        if (showProgress) ...[
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: 'Progress',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ProgressGrid(profile: profile),
+                const SizedBox(height: 12),
+                const ProgressLegend(),
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 12),
         _StatRow(profile: profile),
         if (footer != null) ...[const SizedBox(height: 26), footer!],

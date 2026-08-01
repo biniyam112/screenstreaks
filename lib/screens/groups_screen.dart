@@ -89,7 +89,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       await HomeWidget.saveWidgetData<String>(
         'leaderboard',
         jsonEncode(members
-            .take(5)
+            .take(6)
             .map((p) => {
                   'name': p.displayName,
                   'streak': p.currentStreak,

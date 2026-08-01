@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
@@ -208,8 +209,54 @@ class LocalRepository implements Repository {
       });
     }
 
-    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return items.take(40).toList();
+    // Weekend hold: both Saturday and Sunday met, most recent occurrence.
+    for (final p in _people.values) {
+      final map = p.byDay;
+      final days = map.keys.toList()..sort();
+      for (final day in days.reversed) {
+        if (day.weekday != DateTime.sunday) continue;
+        final sat = day.subtract(const Duration(days: 1));
+        if (map[day]?.limitMet == true && map[sat]?.limitMet == true) {
+          items.add(make(p, 'weekend', 2, day));
+          break;
+        }
+      }
+    }
+
+    // Most improved: last 30 days versus the 30 before.
+    for (final p in _people.values) {
+      final now = (p.successRate(30) * 100).round();
+      final before = (p.successRate(60) * 100).round();
+      final gain = now - before;
+      if (gain >= 8) {
+        items.add(make(p, 'improved', gain, dateOnly(DateTime.now())));
+      }
+    }
+
+    // Group day: every member of a group under on the same day.
+    for (final g in _demoGroups) {
+      final members =
+          g.memberIds.map((id) => _people[id]).whereType<Profile>().toList();
+      if (members.length < 2) continue;
+      final days = members.first.byDay.keys.toList()..sort();
+      for (final day in days.reversed) {
+        if (members.every((m) => m.byDay[day]?.limitMet == true)) {
+          final host = members.firstWhere((m) => m.isMe, orElse: () => members.first);
+          items.add(make(host, 'group_day', members.length, day));
+          break;
+        }
+      }
+    }
+
+    // Streak milestones vastly outnumber the rest, so let every special
+    // through and fill the remainder with the newest streaks.
+    final special = items.where((e) => e.kind != 'streak').toList()
+      ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    final streaks = items.where((e) => e.kind == 'streak').toList()
+      ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    final mixed = [...special.take(24), ...streaks.take(16)]
+      ..sort((x, y) => y.createdAt.compareTo(x.createdAt));
+    return mixed;
   }
 
   @override
@@ -335,7 +382,7 @@ class LocalRepository implements Repository {
           DailyRecord(
             day: day,
             limitMet: true,
-            usedMinutes: (limit * 0.6).round(),
+            usedMinutes: Platform.isAndroid ? (limit * 0.6).round() : null,
             limitMinutes: limit,
           ),
         );
