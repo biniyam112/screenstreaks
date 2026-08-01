@@ -11,6 +11,7 @@ import '../services/usage_service.dart';
 import '../theme.dart';
 import '../theme_provider.dart';
 import '../widgets.dart';
+import '../services/screen_time.dart';
 
 /// Daily goal, alerts, appearance, usage-access (Android), and sign-out.
 class SettingsScreen extends StatefulWidget {
@@ -22,7 +23,9 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
-  int _goal = 120; // current picker value (unsaved)
+  int _goal = 120;
+  bool _stHasApps = false;
+  int _stLimit = 0; // current picker value (unsaved)
   int _savedGoal = 120; // last value persisted to the backend
   bool _notif = true;
   bool _hasPermission = false;
@@ -60,6 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       _hasPermission = perm;
       _loaded = true;
     });
+    _refreshScreenTime();
   }
 
   Future<void> _saveGoal() async {
@@ -78,6 +82,31 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() => _notif = v);
     await Prefs.setNotificationsEnabled(v);
     if (v) await Notifications.requestPermission();
+  }
+
+  Future<void> _refreshScreenTime() async {
+    final has = await ScreenTime.hasSelection();
+    final active = await ScreenTime.activeLimit();
+    if (!mounted) return;
+    setState(() {
+      _stHasApps = has;
+      _stLimit = active;
+    });
+  }
+
+  Future<void> _pickApps() async {
+    await ScreenTime.requestAuthorization();
+    await ScreenTime.pickApps();
+    await _refreshScreenTime();
+  }
+
+  Future<void> _startTracking() async {
+    final ok = await ScreenTime.startMonitoring(_savedGoal);
+    await _refreshScreenTime();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(ok ? 'Tracking started' : "Couldn't start tracking")),
+    );
   }
 
   @override
@@ -131,6 +160,58 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onChanged: (_) => ThemeScope.of(context).toggleTheme(),
                   ),
                 ),
+                if (ScreenTime.supported) ...[
+                  const SizedBox(height: 24),
+                  _SectionLabel('Screen Time'),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _stLimit > 0
+                              ? 'Tracking automatically. iOS tells the app when '
+                                  'you pass your limit — nothing else is shared.'
+                              : 'Let iOS track this for you. Pick which apps '
+                                  'count, and your days log themselves.',
+                          style: appFont(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            color: context.cTextSec,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ModernButton(
+                          label: _stHasApps ? 'Change apps' : 'Choose apps',
+                          onPressed: _pickApps,
+                        ),
+                        const SizedBox(height: 10),
+                        ModernButton(
+                          label: _stLimit > 0 ? 'Restart tracking' : 'Start tracking',
+                          onPressed: _stHasApps ? _startTracking : null,
+                        ),
+                        if (_stLimit > 0) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(IconsaxPlusBold.tick_circle,
+                                  size: 16, color: AppColors.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Watching ${_stLimit ~/ 60}h ${_stLimit % 60}m',
+                                style: appFont(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.cTextSec,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 if (Platform.isAndroid) ...[
                   const SizedBox(height: 24),
                   _SectionLabel('Automatic tracking'),

@@ -200,6 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     showIdentity: false,
                     showLiveUsage: Platform.isAndroid,
                     showProgress: false,
+                    showTodayStatus: false,
                     checkInControls: Platform.isAndroid || _monitoring
                         ? null
                         : _CheckInButtons(profile: _me!, onChanged: _load),
@@ -538,7 +539,7 @@ void showShareSheet(BuildContext context, Profile me) {
           ),
           const SizedBox(height: 6),
           Text(
-            'Share your code. When they enter it in Vero, '
+            'Share your code. When they enter it in Undr, '
             "you'll see each other's streaks.",
             style: appFont(
               fontSize: 13.5,
@@ -582,7 +583,7 @@ void showShareSheet(BuildContext context, Profile me) {
               await SharePlus.instance.share(
                 ShareParams(
                   text: inviteMessage,
-                  subject: 'Join me on Vero',
+                  subject: 'Join me on Undr',
                   sharePositionOrigin: origin,
                 ),
               );

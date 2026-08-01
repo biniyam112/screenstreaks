@@ -66,7 +66,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: 28),
               Text(
-                'Vero',
+                'Undr',
                 style: appFont(
                   fontSize: 30,
                   fontWeight: FontWeight.w800,

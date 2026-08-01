@@ -22,6 +22,7 @@ class ProfileView extends StatelessWidget {
     this.showIdentity = true,
     this.showLiveUsage = false,
     this.showProgress = true,
+    this.showTodayStatus = true,
   });
 
   final Profile profile;
@@ -40,6 +41,9 @@ class ProfileView extends StatelessWidget {
   /// The 126-day grid. Off on the home tab so the page fits without scrolling.
   final bool showProgress;
 
+  /// The today status pill. Off where the daily figure is enough on its own.
+  final bool showTodayStatus;
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -51,6 +55,7 @@ class ProfileView extends StatelessWidget {
           checkInControls: checkInControls,
           showIdentity: showIdentity,
           showLiveUsage: showLiveUsage,
+          showTodayStatus: showTodayStatus,
         ),
         const SizedBox(height: 12),
         _SectionCard(
@@ -133,6 +138,7 @@ class _HeroCard extends StatelessWidget {
     this.checkInControls,
     this.showIdentity = true,
     this.showLiveUsage = false,
+    this.showTodayStatus = true,
   });
 
   final Profile profile;
@@ -140,6 +146,7 @@ class _HeroCard extends StatelessWidget {
   final Widget? checkInControls;
   final bool showIdentity;
   final bool showLiveUsage;
+  final bool showTodayStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +188,7 @@ class _HeroCard extends StatelessWidget {
             )
           else
             _LimitFigure(limitMinutes: profile.dailyLimitMinutes),
+          if (showTodayStatus) ...[
           const SizedBox(height: 20),
           _TodayStatus(
             record: record,
@@ -189,6 +197,7 @@ class _HeroCard extends StatelessWidget {
             // but suppress the duplicate minutes line.
             compact: useGauge,
           ),
+          ],
         ],
       ),
     );
