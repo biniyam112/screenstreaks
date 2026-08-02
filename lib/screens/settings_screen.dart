@@ -190,6 +190,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                           label: _stLimit > 0 ? 'Restart tracking' : 'Start tracking',
                           onPressed: _stHasApps ? _startTracking : null,
                         ),
+                        const SizedBox(height: 10),
+                        // TEMPORARY: 2-minute threshold for testing. Remove.
+                        ModernButton(
+                          label: 'TEST · track 2 minutes',
+                          onPressed: _stHasApps
+                              ? () async {
+                                  await ScreenTime.startMonitoring(2);
+                                  await _refreshScreenTime();
+                                }
+                              : null,
+                        ),
                         if (_stLimit > 0) ...[
                           const SizedBox(height: 12),
                           Row(

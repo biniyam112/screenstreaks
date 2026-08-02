@@ -237,4 +237,21 @@ class SupabaseRepository implements Repository {
       Group(id: 'all', name: 'Friends', memberIds: all.map((p) => p.id).toList())
     ];
   }
+
+  @override
+  Future<Profile> signInWithEmail(String email, String password) async {
+    AuthResponse res;
+    try {
+      res = await _supabase.auth
+          .signInWithPassword(email: email, password: password);
+    } on AuthException {
+      // No account yet — create one, then use the session it returns.
+      res = await _supabase.auth.signUp(email: email, password: password);
+    }
+    if (res.session == null) {
+      throw Exception(
+          'Account created — confirm it from the email we sent, then sign in.');
+    }
+    return me();
+  }
 }

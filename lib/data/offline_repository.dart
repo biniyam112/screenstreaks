@@ -208,4 +208,8 @@ class OfflineRepository implements Repository {
 
   @override
   Future<List<Group>> groups() => _inner.groups();
+
+  @override
+  Future<Profile> signInWithEmail(String email, String password) =>
+      _inner.signInWithEmail(email, password);
 }

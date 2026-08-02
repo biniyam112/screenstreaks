@@ -15,8 +15,38 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _signInEmail() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+    if (email.isEmpty || password.length < 6) {
+      setState(() => _error = 'Enter an email and a password of 6+ characters.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await RepoScope.of(context).signInWithEmail(email, password);
+      widget.onSignedIn();
+    } catch (e) {
+      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _signIn() async {
     setState(() {
@@ -106,6 +136,41 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 14),
               ],
+              _Field(
+                controller: _email,
+                hint: 'Email',
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 10),
+              _Field(
+                controller: _password,
+                hint: 'Password',
+                obscure: true,
+                onSubmitted: (_) => _signInEmail(),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: _busy ? null : _signInEmail,
+                  child: Text(
+                    _busy ? 'Signing in…' : 'Continue with email',
+                    style: appFont(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _GoogleButton(busy: _busy, onTap: _busy ? null : _signIn),
               if (!AppConfig.hasBackend) ...[
                 const SizedBox(height: 12),
@@ -227,4 +292,50 @@ class _GoogleLogoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Plain themed text field for the sign-in form.
+class _Field extends StatelessWidget {
+  const _Field({
+    required this.controller,
+    required this.hint,
+    this.obscure = false,
+    this.keyboardType,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final bool obscure;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      autocorrect: false,
+      textCapitalization: TextCapitalization.none,
+      onSubmitted: onSubmitted,
+      style: appFont(fontSize: 15, color: context.cText),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: appFont(fontSize: 15, color: context.cTextTer),
+        filled: true,
+        fillColor: context.cSurface,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.cDivider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
 }

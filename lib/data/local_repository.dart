@@ -27,6 +27,12 @@ class LocalRepository implements Repository {
   }
 
   @override
+  Future<Profile> signInWithEmail(String email, String password) async {
+    _signedIn = true;
+    return me();
+  }
+
+  @override
   Future<void> signOut() async => _signedIn = false;
 
   @override

@@ -107,26 +107,6 @@ enum ScreenTimeProbe {
                 defaults?.set(pending, forKey: "pending_outcomes")
                 result("cleared \(days.count)")
 
-            case "hasSelection":
-                let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
-                result(data != nil)
-
-            case "activeLimit":
-                result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
-
-            case "readPending":
-                result(UserDefaults(suiteName: suite)?
-                    .dictionary(forKey: "pending_outcomes") ?? [:])
-
-            case "clearPending":
-                let days = (call.arguments as? [String]) ?? []
-                let defaults = UserDefaults(suiteName: suite)
-                var pending = defaults?.dictionary(forKey: "pending_outcomes")
-                    as? [String: Bool] ?? [:]
-                for day in days { pending.removeValue(forKey: day) }
-                defaults?.set(pending, forKey: "pending_outcomes")
-                result("cleared \(days.count)")
-
             case "readLog":
                 result(UserDefaults(suiteName: suite)?
                     .stringArray(forKey: "probe_log") ?? [])
