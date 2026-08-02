@@ -46,10 +46,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       final friends = await repo.friends();
       final groups = await repo.groups();
       final people = {me.id: me, for (final f in friends) f.id: f};
-      final limits = <String, int?>{};
-      for (final g in groups) {
-        limits[g.id] = await Prefs.groupLimit(g.id);
-      }
+      final limits = {for (final g in groups) g.id: g.limitMinutes};
       final pinned = await Prefs.widgetGroupId() ??
           (groups.isNotEmpty ? groups.first.id : null);
       if (!mounted) return;
@@ -120,6 +117,71 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  Future<void> _createGroup() async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: dialogContext.cSurface,
+        title: Text(
+          'New group',
+          style: appFont(fontWeight: FontWeight.w700, color: dialogContext.cText),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          maxLength: 30,
+          style: appFont(color: dialogContext.cText, fontWeight: FontWeight.w600),
+          decoration: InputDecoration(
+            hintText: 'e.g. Work, Family, Roommates',
+            counterText: '',
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: dialogContext.cDivider),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+            ),
+          ),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: appFont(
+                  color: dialogContext.cTextSec, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(
+              'Create',
+              style: appFont(
+                  color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+    if (!mounted) return;
+    try {
+      await RepoScope.of(context).createGroup(name);
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   Future<void> _open(Group g) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => GroupDetailScreen(group: g, members: membersOf(g)),
@@ -130,27 +192,125 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Groups')),
+      appBar: AppBar(
+        title: const Text('Groups'),
+        actions: [
+          IconButton(
+            tooltip: 'New group',
+            icon: const Icon(IconsaxPlusLinear.add_square),
+            onPressed: _createGroup,
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView.separated(
+            : _groups.isEmpty
+                ? _EmptyGroups(onCreate: _createGroup)
+                : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 itemCount: _groups.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
                   final g = _groups[i];
-                  return GroupCard(
+                  return Dismissible(
+                    key: ValueKey(g.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 22),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(IconsaxPlusLinear.trash,
+                          color: AppColors.danger),
+                    ),
+                    confirmDismiss: (_) => showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        backgroundColor: c.cSurface,
+                        title: Text('Delete ${g.name}?',
+                            style: appFont(
+                                fontWeight: FontWeight.w700, color: c.cText)),
+                        content: Text(
+                          'This removes the group for everyone in it.',
+                          style: appFont(
+                              fontWeight: FontWeight.w500, color: c.cTextSec),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: Text('Cancel',
+                                style: appFont(
+                                    color: c.cTextSec,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: Text('Delete',
+                                style: appFont(
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    onDismissed: (_) async {
+                      try {
+                        await RepoScope.of(context).deleteGroup(g.id);
+                      } catch (_) {}
+                      await _load();
+                    },
+                    child: GroupCard(
                     group: g,
                     members: membersOf(g),
                     limit: _limits[g.id],
                     pinned: _pinned == g.id,
                     onTap: () => _open(g),
                     onPin: () => _pin(g),
+                    ),
                   );
                 },
               ),
       ),
+    );
+  }
+}
+
+class _EmptyGroups extends StatelessWidget {
+  const _EmptyGroups({required this.onCreate});
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(28, 90, 28, 32),
+      children: [
+        Icon(IconsaxPlusLinear.people, size: 46, color: context.cTextTer),
+        const SizedBox(height: 18),
+        Text(
+          'No groups yet',
+          textAlign: TextAlign.center,
+          style: appFont(
+              fontSize: 18, fontWeight: FontWeight.w800, color: context.cText),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Make a group with friends, agree a limit everyone can live with, '
+          'and keep the streak alive together.',
+          textAlign: TextAlign.center,
+          style: appFont(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            height: 1.45,
+            color: context.cTextSec,
+          ),
+        ),
+        const SizedBox(height: 22),
+        ModernButton(label: 'Create a group', onPressed: onCreate),
+      ],
     );
   }
 }
@@ -311,13 +471,110 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   @override
   void initState() {
     super.initState();
-    Prefs.groupLimit(widget.group.id).then((v) {
+    _limit = widget.group.limitMinutes;
+    _loading = false;
+  }
+
+  Future<void> _addMembers() async {
+    final repo = RepoScope.of(context);
+    final friends = await repo.friends();
+    if (!mounted) return;
+
+    final existing = widget.members.map((m) => m.id).toSet();
+    final candidates =
+        friends.where((f) => !existing.contains(f.id)).toList();
+
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Everyone you know is already in.')),
+      );
+      return;
+    }
+
+    final picked = <String>{};
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Add to ${widget.group.name}',
+                style: appFont(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: context.cText,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...candidates.map((f) {
+                final on = picked.contains(f.id);
+                return CheckboxListTile(
+                  value: on,
+                  activeColor: AppColors.primary,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    f.displayName,
+                    style: appFont(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: context.cText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Limit ${fmtLimit(f.dailyLimitMinutes)}',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: context.cTextSec,
+                    ),
+                  ),
+                  onChanged: (v) => setSheet(() {
+                    if (v == true) {
+                      picked.add(f.id);
+                    } else {
+                      picked.remove(f.id);
+                    }
+                  }),
+                );
+              }),
+              const SizedBox(height: 18),
+              ModernButton(
+                label: picked.isEmpty
+                    ? 'Select someone'
+                    : 'Add ${picked.length}',
+                onPressed: picked.isEmpty
+                    ? null
+                    : () => Navigator.pop(sheetContext, true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (confirmed != true || picked.isEmpty) return;
+    if (!mounted) return;
+    try {
+      for (final id in picked) {
+        await repo.addToGroup(widget.group.id, id);
+      }
+    } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _limit = v;
-        _loading = false;
-      });
-    });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   Future<void> _editLimit() async {
@@ -379,7 +636,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     );
 
     if (saved == null) return;
-    await Prefs.setGroupLimit(widget.group.id, saved);
+    if (!mounted) return;
+    await RepoScope.of(context).setGroupLimit(widget.group.id, saved);
     if (!mounted) return;
     setState(() => _limit = saved);
   }
@@ -397,6 +655,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       appBar: AppBar(
         title: Text(widget.group.name),
         actions: [
+          IconButton(
+            tooltip: 'Add members',
+            icon: const Icon(IconsaxPlusLinear.user_add),
+            onPressed: _addMembers,
+          ),
           TextButton(
             onPressed: _editLimit,
             child: Text(

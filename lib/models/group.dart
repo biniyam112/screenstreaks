@@ -1,13 +1,23 @@
 /// An accountability group. Membership is by profile id and always includes
-/// 'me'; a person can belong to several groups.
+/// the current user; a person can belong to several groups.
 class Group {
   const Group({
     required this.id,
     required this.name,
     required this.memberIds,
+    this.adminId,
+    this.limitMinutes,
   });
 
   final String id;
   final String name;
   final List<String> memberIds;
+
+  /// Who can change the limit and the roster. Null on demo data.
+  final String? adminId;
+
+  /// The shared limit everyone must stay under. Null until the admin sets one.
+  final int? limitMinutes;
+
+  bool isAdmin(String userId) => adminId == userId;
 }

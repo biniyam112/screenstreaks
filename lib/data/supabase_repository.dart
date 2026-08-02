@@ -231,11 +231,83 @@ class SupabaseRepository implements Repository {
 
   @override
   Future<List<Group>> groups() async {
-    // No group tables yet — treat everyone as one group so screens work.
-    final all = [await me(), ...await friends()];
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final mine = await _supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', userId);
+    final ids = [for (final r in mine) r['group_id'] as String];
+    if (ids.isEmpty) return [];
+
+    final rows = await _supabase
+        .from('groups')
+        .select('id, name, admin_id, limit_minutes')
+        .inFilter('id', ids);
+
+    final members = await _supabase
+        .from('group_members')
+        .select('group_id, user_id')
+        .inFilter('group_id', ids);
+
+    final byGroup = <String, List<String>>{};
+    for (final m in members) {
+      byGroup
+          .putIfAbsent(m['group_id'] as String, () => [])
+          .add(m['user_id'] as String);
+    }
+
     return [
-      Group(id: 'all', name: 'Friends', memberIds: all.map((p) => p.id).toList())
+      for (final g in rows)
+        Group(
+          id: g['id'] as String,
+          name: g['name'] as String,
+          adminId: g['admin_id'] as String?,
+          limitMinutes: g['limit_minutes'] as int?,
+          memberIds: byGroup[g['id']] ?? const [],
+        ),
     ];
+  }
+
+  @override
+  Future<Group> createGroup(String name) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+
+    final row = await _supabase
+        .from('groups')
+        .insert({'name': name, 'admin_id': userId})
+        .select()
+        .single();
+
+    final id = row['id'] as String;
+    // The creator is a member too.
+    await _supabase
+        .from('group_members')
+        .insert({'group_id': id, 'user_id': userId});
+
+    return Group(
+      id: id,
+      name: name,
+      adminId: userId,
+      limitMinutes: null,
+      memberIds: [userId],
+    );
+  }
+
+  @override
+  Future<void> addToGroup(String groupId, String userId) async {
+    await _supabase
+        .from('group_members')
+        .insert({'group_id': groupId, 'user_id': userId});
+  }
+
+  @override
+  Future<void> setGroupLimit(String groupId, int minutes) async {
+    await _supabase
+        .from('groups')
+        .update({'limit_minutes': minutes}).eq('id', groupId);
   }
 
   @override
@@ -253,5 +325,10 @@ class SupabaseRepository implements Repository {
           'Account created — confirm it from the email we sent, then sign in.');
     }
     return me();
+  }
+
+  @override
+  Future<void> deleteGroup(String groupId) async {
+    await _supabase.from('groups').delete().eq('id', groupId);
   }
 }

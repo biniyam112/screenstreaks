@@ -405,4 +405,17 @@ class LocalRepository implements Repository {
       isMe: isMe,
     );
   }
+
+  @override
+  Future<Group> createGroup(String name) async =>
+      Group(id: 'demo', name: name, memberIds: const ['me']);
+
+  @override
+  Future<void> addToGroup(String groupId, String userId) async {}
+
+  @override
+  Future<void> setGroupLimit(String groupId, int minutes) async {}
+
+  @override
+  Future<void> deleteGroup(String groupId) async {}
 }

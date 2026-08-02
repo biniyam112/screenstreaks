@@ -25,6 +25,22 @@ abstract class Repository {
   /// The current user's accountability friends (with history).
   Future<List<Profile>> friends();
 
+  /// Create a group. The caller becomes its admin. Returns the new group.
+  Future<Group> createGroup(String name) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Add a friend to a group you administer.
+  Future<void> addToGroup(String groupId, String userId) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Delete a group you administer.
+  Future<void> deleteGroup(String groupId) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Set the shared limit. Admin only.
+  Future<void> setGroupLimit(String groupId, int minutes) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
   /// Groups the user belongs to. Backends without group support fall back to
   /// a single group holding everyone, so screens work either way.
   Future<List<Group>> groups() async {

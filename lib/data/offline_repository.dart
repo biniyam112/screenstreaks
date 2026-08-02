@@ -212,4 +212,18 @@ class OfflineRepository implements Repository {
   @override
   Future<Profile> signInWithEmail(String email, String password) =>
       _inner.signInWithEmail(email, password);
+
+  @override
+  Future<Group> createGroup(String name) => _inner.createGroup(name);
+
+  @override
+  Future<void> addToGroup(String groupId, String userId) =>
+      _inner.addToGroup(groupId, userId);
+
+  @override
+  Future<void> setGroupLimit(String groupId, int minutes) =>
+      _inner.setGroupLimit(groupId, minutes);
+
+  @override
+  Future<void> deleteGroup(String groupId) => _inner.deleteGroup(groupId);
 }
