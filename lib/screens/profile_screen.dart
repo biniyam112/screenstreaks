@@ -16,6 +16,7 @@ import '../widgets.dart';
 import '../widgets/profile_view.dart';
 import 'friend_detail_screen.dart';
 import '../services/screen_time.dart';
+import 'history_screen.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -200,6 +201,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     showIdentity: false,
                     showLiveUsage: Platform.isAndroid,
                     showProgress: false,
+                    onOpenHistory: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HistoryScreen(profile: _me!),
+                      ),
+                    ),
                     showTodayStatus: false,
                     checkInControls: Platform.isAndroid || _monitoring
                         ? null

@@ -6,6 +6,7 @@ import '../theme.dart';
 import 'progress_grid.dart';
 import 'usage_gauge.dart';
 import 'week_strip.dart';
+import 'month_grid.dart';
 
 /// Reusable profile body used on the home screen and friend detail pages.
 ///
@@ -23,6 +24,7 @@ class ProfileView extends StatelessWidget {
     this.showLiveUsage = false,
     this.showProgress = true,
     this.showTodayStatus = true,
+    this.onOpenHistory,
   });
 
   final Profile profile;
@@ -43,6 +45,9 @@ class ProfileView extends StatelessWidget {
 
   /// The today status pill. Off where the daily figure is enough on its own.
   final bool showTodayStatus;
+
+  /// Tapping the month opens the full history.
+  final VoidCallback? onOpenHistory;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +83,14 @@ class ProfileView extends StatelessWidget {
         ],
         const SizedBox(height: 12),
         _StatRow(profile: profile),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onOpenHistory,
+          child: _SectionCard(
+            title: 'This month',
+            child: MonthGrid(profile: profile, month: DateTime.now()),
+          ),
+        ),
         if (footer != null) ...[const SizedBox(height: 26), footer!],
       ],
     );
