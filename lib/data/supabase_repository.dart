@@ -331,4 +331,79 @@ class SupabaseRepository implements Repository {
   Future<void> deleteGroup(String groupId) async {
     await _supabase.from('groups').delete().eq('id', groupId);
   }
+
+  @override
+  Future<void> leaveGroup(String groupId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+    await _supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+  }
+
+  @override
+  Future<void> inviteToGroup(String groupId, String userId) async {
+    await _supabase.from('group_requests').upsert({
+      'group_id': groupId,
+      'user_id': userId,
+      'status': 'pending',
+    }, onConflict: 'group_id,user_id');
+  }
+
+  @override
+  Future<List<GroupInvite>> pendingInvites() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    final rows = await _supabase
+        .from('group_requests')
+        .select('id, group_id, groups(name, admin_id)')
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+
+    final invites = <GroupInvite>[];
+    for (final r in rows) {
+      final g = r['groups'] as Map<String, dynamic>?;
+      if (g == null) continue;
+      var admin = 'A friend';
+      final adminId = g['admin_id'] as String?;
+      if (adminId != null) {
+        final p = await _supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', adminId)
+            .maybeSingle();
+        admin = (p?['display_name'] as String?) ?? admin;
+      }
+      invites.add(GroupInvite(
+        id: r['id'] as String,
+        groupId: r['group_id'] as String,
+        groupName: g['name'] as String? ?? 'a group',
+        invitedBy: admin,
+      ));
+    }
+    return invites;
+  }
+
+  @override
+  Future<void> respondToInvite(String inviteId, bool accept) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+
+    final row = await _supabase
+        .from('group_requests')
+        .update({'status': accept ? 'accepted' : 'declined'})
+        .eq('id', inviteId)
+        .select('group_id')
+        .single();
+
+    if (accept) {
+      await _supabase.from('group_members').insert({
+        'group_id': row['group_id'],
+        'user_id': userId,
+      });
+    }
+  }
 }

@@ -17,6 +17,7 @@ import '../widgets/profile_view.dart';
 import 'friend_detail_screen.dart';
 import '../services/screen_time.dart';
 import 'history_screen.dart';
+import '../widgets/aurora_header.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -150,37 +151,38 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My streak'),
-        actions: [
-          if (_me != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: GestureDetector(
-                onTap: widget.onProfile,
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: (_me!.avatarColor ?? AppColors.primary)
-                        .withValues(alpha: 0.16),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    _me!.initials,
-                    style: appFont(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: _me!.avatarColor ?? AppColors.primary,
+      body: Column(
+        children: [
+          AuroraHeader(
+            title: 'Your streak',
+            tint: const Color(0xFF9B7FE8),
+            trailing: _me == null
+                ? null
+                : GestureDetector(
+                    onTap: widget.onProfile,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: (_me!.avatarColor ?? AppColors.primary)
+                            .withValues(alpha: 0.22),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        _me!.initials,
+                        style: appFont(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: _me!.avatarColor ?? AppColors.primary,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
-        ],
-      ),
-      body: SafeArea(
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _me == null
@@ -213,6 +215,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -6,6 +6,7 @@ import '../data/repo_scope.dart';
 import '../services/prefs.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../services/screen_time.dart';
 
 /// First-run setup shown once after a new sign-up:
 ///   1. set your daily screen-time limit
@@ -25,6 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameController = TextEditingController();
 
   int _page = 0;
+  bool _tracking = false;
   int _limit = 120;
   bool _loading = true;
   bool _saving = false;
@@ -61,21 +63,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    setState(() => _page = 1);
+    final target = _page + 1;
+    setState(() => _page = target);
     _pageController.animateToPage(
-      1,
+      target,
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
     );
   }
 
   void _back() {
-    setState(() => _page = 0);
+    final target = _page - 1;
+    setState(() => _page = target);
     _pageController.animateToPage(
-      0,
+      target,
       duration: const Duration(milliseconds: 320),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  /// Ask for Screen Time access and start watching the chosen limit. If the
+  /// user declines we carry on — they can turn it on later in Settings.
+  Future<void> _enableTracking() async {
+    final ok = await ScreenTime.requestAuthorization();
+    if (!ok || !mounted) return;
+    await ScreenTime.pickApps();
+    if (!mounted) return;
+    final started = await ScreenTime.startMonitoring(_limit);
+    if (mounted) setState(() => _tracking = started);
   }
 
   Future<void> _finish() async {
@@ -128,6 +143,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _Dot(active: _page == 0),
                   const SizedBox(width: 6),
                   _Dot(active: _page == 1),
+                  if (ScreenTime.supported) ...[
+                    const SizedBox(width: 6),
+                    _Dot(active: _page == 2),
+                  ],
                   const Spacer(),
                   const SizedBox(width: 40),
                 ],
@@ -143,12 +162,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     onChanged: (v) => setState(() => _limit = v),
                   ),
                   _NamePage(controller: _nameController),
+                  if (ScreenTime.supported)
+                    _TrackingPage(
+                      enabled: _tracking,
+                      onEnable: _enableTracking,
+                    ),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              child: _page == 0
+              child: _page < (ScreenTime.supported ? 2 : 1)
                   ? ModernButton(
                       label: 'Continue',
                       icon: IconsaxPlusBold.arrow_right_3,
@@ -227,6 +251,74 @@ class _LimitPage extends StatelessWidget {
         ),
         const SizedBox(height: 36),
         GoalPicker(minutes: limit, onChanged: onChanged),
+      ],
+    );
+  }
+}
+
+class _TrackingPage extends StatelessWidget {
+  const _TrackingPage({required this.enabled, required this.onEnable});
+
+  final bool enabled;
+  final VoidCallback onEnable;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      children: [
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              enabled ? IconsaxPlusBold.tick_circle : IconsaxPlusBold.mobile,
+              color: AppColors.accent,
+              size: 32,
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        Text(
+          enabled ? "You're all set" : 'Let iOS keep score',
+          textAlign: TextAlign.center,
+          style: appFont(
+              fontSize: 24, fontWeight: FontWeight.w800, color: context.cText),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          enabled
+              ? 'Your days will log themselves. Change which apps count any '
+                  'time in Settings.'
+              : 'Pick which apps count toward your limit. iOS tells Undr when '
+                  'you go over — it never shares what you were doing.',
+          textAlign: TextAlign.center,
+          style: appFont(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: context.cTextSec,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 32),
+        if (!enabled)
+          ModernButton(label: 'Choose apps', onPressed: onEnable),
+        if (!enabled) ...[
+          const SizedBox(height: 12),
+          Text(
+            'You can skip this and set it up later.',
+            textAlign: TextAlign.center,
+            style: appFont(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: context.cTextTer,
+            ),
+          ),
+        ],
       ],
     );
   }

@@ -226,4 +226,18 @@ class OfflineRepository implements Repository {
 
   @override
   Future<void> deleteGroup(String groupId) => _inner.deleteGroup(groupId);
+
+  @override
+  Future<void> leaveGroup(String groupId) => _inner.leaveGroup(groupId);
+
+  @override
+  Future<void> inviteToGroup(String groupId, String userId) =>
+      _inner.inviteToGroup(groupId, userId);
+
+  @override
+  Future<List<GroupInvite>> pendingInvites() => _inner.pendingInvites();
+
+  @override
+  Future<void> respondToInvite(String inviteId, bool accept) =>
+      _inner.respondToInvite(inviteId, accept);
 }

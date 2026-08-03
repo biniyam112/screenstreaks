@@ -33,6 +33,21 @@ abstract class Repository {
   Future<void> addToGroup(String groupId, String userId) =>
       throw UnimplementedError('Groups not supported by this backend');
 
+  /// Invite a friend to a group you administer.
+  Future<void> inviteToGroup(String groupId, String userId) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Invitations waiting on your answer.
+  Future<List<GroupInvite>> pendingInvites() async => const [];
+
+  /// Accept or decline an invitation.
+  Future<void> respondToInvite(String inviteId, bool accept) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Leave a group you're a member of.
+  Future<void> leaveGroup(String groupId) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
   /// Delete a group you administer.
   Future<void> deleteGroup(String groupId) =>
       throw UnimplementedError('Groups not supported by this backend');

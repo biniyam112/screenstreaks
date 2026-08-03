@@ -418,4 +418,16 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> deleteGroup(String groupId) async {}
+
+  @override
+  Future<void> leaveGroup(String groupId) async {}
+
+  @override
+  Future<void> inviteToGroup(String groupId, String userId) async {}
+
+  @override
+  Future<List<GroupInvite>> pendingInvites() async => const [];
+
+  @override
+  Future<void> respondToInvite(String inviteId, bool accept) async {}
 }

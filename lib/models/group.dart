@@ -21,3 +21,20 @@ class Group {
 
   bool isAdmin(String userId) => adminId == userId;
 }
+
+/// A pending invitation to join a group.
+class GroupInvite {
+  const GroupInvite({
+    required this.id,
+    required this.groupId,
+    required this.groupName,
+    required this.invitedBy,
+  });
+
+  final String id;
+  final String groupId;
+  final String groupName;
+
+  /// Display name of the admin who sent it.
+  final String invitedBy;
+}

@@ -31,6 +31,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   Map<String, Profile> _people = const {};
   Map<String, int?> _limits = const {};
   String? _pinned;
+  List<GroupInvite> _invites = const [];
   bool _loading = true;
 
   @override
@@ -45,6 +46,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       final me = await repo.me();
       final friends = await repo.friends();
       final groups = await repo.groups();
+      final invites = await repo.pendingInvites();
       final people = {me.id: me, for (final f in friends) f.id: f};
       final limits = {for (final g in groups) g.id: g.limitMinutes};
       final pinned = await Prefs.widgetGroupId() ??
@@ -52,6 +54,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       if (!mounted) return;
       setState(() {
         _groups = groups;
+        _invites = invites;
         _people = people;
         _limits = limits;
         _pinned = pinned;
@@ -115,6 +118,19 @@ class _GroupsScreenState extends State<GroupsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Widget now shows ${g.name}')),
     );
+  }
+
+  Future<void> _respond(GroupInvite invite, bool accept) async {
+    try {
+      await RepoScope.of(context).respondToInvite(invite.id, accept);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+    await _load();
   }
 
   Future<void> _createGroup() async {
@@ -206,14 +222,22 @@ class _GroupsScreenState extends State<GroupsScreen> {
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _groups.isEmpty
+            : _groups.isEmpty && _invites.isEmpty
                 ? _EmptyGroups(onCreate: _createGroup)
                 : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: _groups.length,
+                itemCount: _groups.length + _invites.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
-                  final g = _groups[i];
+                  if (i < _invites.length) {
+                    final inv = _invites[i];
+                    return _InviteCard(
+                      invite: inv,
+                      onAccept: () => _respond(inv, true),
+                      onDecline: () => _respond(inv, false),
+                    );
+                  }
+                  final g = _groups[i - _invites.length];
                   return Dismissible(
                     key: ValueKey(g.id),
                     direction: DismissDirection.endToStart,
@@ -274,6 +298,69 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   );
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _InviteCard extends StatelessWidget {
+  const _InviteCard({
+    required this.invite,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  final GroupInvite invite;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.info, width: 1.3),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Join ${invite.groupName}?',
+            style: appFont(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: context.cText,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${invite.invitedBy} invited you.',
+            style: appFont(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: context.cTextSec,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: ModernButton(label: 'Join', onPressed: onAccept)),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: onDecline,
+                child: Text(
+                  'Decline',
+                  style: appFont(
+                    fontWeight: FontWeight.w700,
+                    color: context.cTextSec,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -475,6 +562,46 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     _loading = false;
   }
 
+  Future<void> _leave() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Leave ${widget.group.name}?',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          "You'll stop counting toward this group's streak.",
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text('Cancel',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Leave',
+                style: appFont(
+                    color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await RepoScope.of(context).leaveGroup(widget.group.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _addMembers() async {
     final repo = RepoScope.of(context);
     final friends = await repo.friends();
@@ -506,7 +633,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Add to ${widget.group.name}',
+                'Invite to ${widget.group.name}',
                 style: appFont(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -549,7 +676,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               ModernButton(
                 label: picked.isEmpty
                     ? 'Select someone'
-                    : 'Add ${picked.length}',
+                    : 'Invite ${picked.length}',
                 onPressed: picked.isEmpty
                     ? null
                     : () => Navigator.pop(sheetContext, true),
@@ -564,7 +691,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (!mounted) return;
     try {
       for (final id in picked) {
-        await repo.addToGroup(widget.group.id, id);
+        await repo.inviteToGroup(widget.group.id, id);
       }
     } catch (e) {
       if (!mounted) return;
@@ -659,6 +786,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             tooltip: 'Add members',
             icon: const Icon(IconsaxPlusLinear.user_add),
             onPressed: _addMembers,
+          ),
+          IconButton(
+            tooltip: 'Leave group',
+            icon: const Icon(IconsaxPlusLinear.logout),
+            onPressed: _leave,
           ),
           TextButton(
             onPressed: _editLimit,
