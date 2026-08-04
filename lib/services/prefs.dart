@@ -52,6 +52,15 @@ class Prefs {
   static Future<void> setWidgetGroupId(String id) async =>
       (await SharedPreferences.getInstance()).setString('widget_group', id);
 
+  /// True once the user has turned on Screen Time tracking. Survives app
+  /// installs, unlike the app-group selection, so we can tell "declined"
+  /// apart from "wiped by a reinstall".
+  static Future<bool> trackingEnabled() async =>
+      (await SharedPreferences.getInstance()).getBool('tracking_enabled') ?? false;
+
+  static Future<void> setTrackingEnabled(bool v) async =>
+      (await SharedPreferences.getInstance()).setBool('tracking_enabled', v);
+
   static Future<bool> notificationsEnabled() async =>
       (await SharedPreferences.getInstance()).getBool(_kNotifEnabled) ?? true;
 

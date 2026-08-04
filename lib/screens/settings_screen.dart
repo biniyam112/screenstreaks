@@ -102,6 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _startTracking() async {
     final ok = await ScreenTime.startMonitoring(_savedGoal);
+    if (ok) await Prefs.setTrackingEnabled(true);
     await _refreshScreenTime();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

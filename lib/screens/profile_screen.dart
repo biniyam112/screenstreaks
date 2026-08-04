@@ -92,7 +92,19 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Future<bool> _ensureMonitoring(int goalMinutes) async {
     if (!ScreenTime.supported) return false;
     try {
-      if (!await ScreenTime.hasSelection()) return false;
+      // An install wipes the app-group container, so a missing selection
+      // doesn't mean the user opted out — Prefs remembers that they didn't.
+      if (!await ScreenTime.hasSelection()) {
+        if (await Prefs.trackingEnabled() && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tracking stopped — set it up again in Settings'),
+              duration: Duration(seconds: 6),
+            ),
+          );
+        }
+        return false;
+      }
       final active = await ScreenTime.activeLimit();
       if (active == goalMinutes) return true;
       return await ScreenTime.startMonitoring(goalMinutes);

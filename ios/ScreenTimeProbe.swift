@@ -72,8 +72,14 @@ enum ScreenTimeProbe {
                         UserDefaults(suiteName: suite)?.set(data, forKey: "selection")
                     }
                     host.dismiss(animated: true)
-                    result("\(selection.applicationTokens.count) apps, "
-                           + "\(selection.categoryTokens.count) categories")
+                    let apps = selection.applicationTokens.count
+                    let cats = selection.categoryTokens.count
+                    // Category-only selections frequently fail to trigger
+                    // thresholds — flag it so the UI can nudge the user.
+                    let warn = (apps == 0 && cats > 0)
+                        ? " — pick individual apps too, categories alone may not count"
+                        : ""
+                    result("\(apps) apps, \(cats) categories\(warn)")
                 }
                 host.present(UIHostingController(rootView: picker), animated: true)
 

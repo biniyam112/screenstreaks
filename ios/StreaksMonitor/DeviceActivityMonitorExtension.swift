@@ -48,8 +48,14 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // absence of a threshold proves nothing.
         if let started = defaults?.object(forKey: "monitoring_started") as? Date,
            !Calendar.current.isDate(started, inSameDayAs: Date()) {
-            record(true, for: todayKey)
-            log("day ended — under limit")
+            var pending = defaults?.dictionary(forKey: "pending_outcomes")
+                as? [String: Bool] ?? [:]
+            if pending[todayKey] == false {
+                log("day ended — already over, pass ignored")
+            } else {
+                record(true, for: todayKey)
+                log("day ended — under limit")
+            }
         } else {
             log("day ended — partial, not recorded")
         }
