@@ -82,7 +82,7 @@ class _DayCell extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               color: fill,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(999),
               border: isToday
                   ? Border.all(color: accent, width: 1.6)
                   : null,

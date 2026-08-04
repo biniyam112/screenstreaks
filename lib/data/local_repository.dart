@@ -430,4 +430,7 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> respondToInvite(String inviteId, bool accept) async {}
+
+  @override
+  Stream<void> recordChanges() => const Stream.empty();
 }

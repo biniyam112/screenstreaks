@@ -43,8 +43,16 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             log("interval ended early (ignored)")
             return
         }
-        record(true, for: todayKey)
-        log("day ended — under limit")
+        // Only claim a pass for a day we watched from the beginning. If
+        // monitoring started mid-day we never saw the earlier hours, so the
+        // absence of a threshold proves nothing.
+        if let started = defaults?.object(forKey: "monitoring_started") as? Date,
+           !Calendar.current.isDate(started, inSameDayAs: Date()) {
+            record(true, for: todayKey)
+            log("day ended — under limit")
+        } else {
+            log("day ended — partial, not recorded")
+        }
     }
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name,

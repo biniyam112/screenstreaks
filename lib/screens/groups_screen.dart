@@ -12,6 +12,7 @@ import '../services/prefs.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'friend_detail_screen.dart';
+import '../widgets/aurora_header.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -26,7 +27,8 @@ class GroupsScreen extends StatefulWidget {
   State<GroupsScreen> createState() => _GroupsScreenState();
 }
 
-class _GroupsScreenState extends State<GroupsScreen> {
+class _GroupsScreenState extends State<GroupsScreen>
+    with WidgetsBindingObserver {
   List<Group> _groups = const [];
   Map<String, Profile> _people = const {};
   Map<String, int?> _limits = const {};
@@ -37,7 +39,19 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
   }
 
   Future<void> _load() async {
@@ -208,18 +222,29 @@ class _GroupsScreenState extends State<GroupsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Groups'),
-        actions: [
-          IconButton(
-            tooltip: 'New group',
-            icon: const Icon(IconsaxPlusLinear.add_square),
-            onPressed: _createGroup,
+      body: Column(
+        children: [
+          AuroraHeader(
+            title: 'Groups',
+            tint: AppColors.info,
+            trailing: GestureDetector(
+              onTap: _createGroup,
+              child: Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(IconsaxPlusLinear.add,
+                    size: 18, color: AppColors.info),
+              ),
+            ),
           ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: SafeArea(
+          Expanded(
+            child: SafeArea(
+              top: false,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _groups.isEmpty && _invites.isEmpty
@@ -298,6 +323,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
                   );
                 },
               ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -779,32 +807,44 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         : membersOverOn(members, dateOnly(DateTime.now()), l);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.group.name),
-        actions: [
-          IconButton(
-            tooltip: 'Add members',
-            icon: const Icon(IconsaxPlusLinear.user_add),
-            onPressed: _addMembers,
-          ),
-          IconButton(
-            tooltip: 'Leave group',
-            icon: const Icon(IconsaxPlusLinear.logout),
-            onPressed: _leave,
-          ),
-          TextButton(
-            onPressed: _editLimit,
-            child: Text(
-              l == null ? 'Set limit' : 'Change',
-              style: appFont(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+      body: Column(
+        children: [
+          AuroraHeader(
+            title: widget.group.name,
+            tint: AppColors.info,
+            trailing: PopupMenuButton<String>(
+              icon: Icon(IconsaxPlusLinear.more, color: context.cText),
+              color: context.cSurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
+              onSelected: (v) {
+                if (v == 'limit') _editLimit();
+                if (v == 'add') _addMembers();
+                if (v == 'leave') _leave();
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'limit',
+                  child: Text(l == null ? 'Set limit' : 'Change limit',
+                      style: appFont(color: context.cText)),
+                ),
+                PopupMenuItem(
+                  value: 'add',
+                  child: Text('Add members',
+                      style: appFont(color: context.cText)),
+                ),
+                PopupMenuItem(
+                  value: 'leave',
+                  child: Text('Leave group',
+                      style: appFont(color: AppColors.danger)),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      body: SafeArea(
+          Expanded(
+            child: SafeArea(
+              top: false,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : ListView.separated(
@@ -823,6 +863,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   return _MemberRow(person: members[i - 1], rank: i);
                 },
               ),
+            ),
+          ),
+        ],
       ),
     );
   }

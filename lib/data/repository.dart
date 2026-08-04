@@ -19,6 +19,11 @@ abstract class Repository {
 
   Future<void> signOut();
 
+  /// Fires whenever a day's outcome changes for you or a friend. Backends
+  /// without live updates return an empty stream and screens just refresh
+  /// on resume instead.
+  Stream<void> recordChanges() => const Stream.empty();
+
   /// The current user's full profile (with history).
   Future<Profile> me();
 

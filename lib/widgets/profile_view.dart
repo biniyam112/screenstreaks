@@ -108,8 +108,7 @@ class _Card extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: context.cSurface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.cDivider),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: child,
     );
@@ -403,8 +402,7 @@ class _StatTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: context.cSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.cDivider),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

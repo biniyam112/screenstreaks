@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -405,5 +406,21 @@ class SupabaseRepository implements Repository {
         'user_id': userId,
       });
     }
+  }
+
+  @override
+  Stream<void> recordChanges() {
+    final controller = StreamController<void>.broadcast();
+    final channel = _supabase.channel('daily_records_changes');
+    channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'daily_records',
+          callback: (_) => controller.add(null),
+        )
+        .subscribe();
+    controller.onCancel = () => _supabase.removeChannel(channel);
+    return controller.stream;
   }
 }

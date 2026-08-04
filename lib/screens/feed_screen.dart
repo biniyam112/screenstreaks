@@ -6,6 +6,7 @@ import '../data/repo_scope.dart';
 import '../models/models.dart';
 import '../theme.dart';
 import 'friend_detail_screen.dart';
+import '../widgets/aurora_header.dart';
 
 /// Social feed: your + your friends' streak milestones, with celebrate
 /// reactions. Backed by Supabase (see supabase/feed.sql).
@@ -104,8 +105,12 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Feed')),
-      body: SafeArea(
+      body: Column(
+        children: [
+          const AuroraHeader(title: 'Feed', tint: AppColors.accent),
+          Expanded(
+            child: SafeArea(
+              top: false,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _failed
@@ -142,6 +147,9 @@ class _FeedScreenState extends State<FeedScreen> {
                         ),
                       ),
               ),
+            ),
+          ),
+        ],
       ),
     );
   }

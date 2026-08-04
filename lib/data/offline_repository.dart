@@ -240,4 +240,7 @@ class OfflineRepository implements Repository {
   @override
   Future<void> respondToInvite(String inviteId, bool accept) =>
       _inner.respondToInvite(inviteId, accept);
+
+  @override
+  Stream<void> recordChanges() => _inner.recordChanges();
 }

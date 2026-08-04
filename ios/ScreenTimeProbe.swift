@@ -153,6 +153,10 @@ enum ScreenTimeProbe {
         center.stopMonitoring([activity])
         try center.startMonitoring(activity, during: schedule,
                                    events: [eventName: activityEvent])
-        UserDefaults(suiteName: suite)?.set(thresholdMinutes, forKey: "active_limit")
+        let defaults = UserDefaults(suiteName: suite)
+        defaults?.set(thresholdMinutes, forKey: "active_limit")
+        // Remember when this interval began so a partial first day isn't
+        // recorded as a pass — we can only prove a day we watched in full.
+        defaults?.set(Date(), forKey: "monitoring_started")
     }
 }
