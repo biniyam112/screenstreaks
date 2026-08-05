@@ -72,7 +72,22 @@ class SupabaseRepository implements Repository {
         .eq('user_id', userId)
         .order('day', ascending: true);
 
-    return _profileFromJson(profile, records);
+    return _profileFromJson(profile, records,
+        passedDays: await _passedDays(userId));
+  }
+
+  /// Days this user has recovered with a personal pass.
+  Future<Set<String>> _passedDays(String userId) async {
+    try {
+      final rows = await _supabase
+          .from('streak_passes')
+          .select('day')
+          .eq('user_id', userId)
+          .isFilter('group_id', null);
+      return {for (final r in rows) r['day'] as String};
+    } catch (_) {
+      return const {};
+    }
   }
 
   @override
@@ -117,7 +132,8 @@ class SupabaseRepository implements Repository {
         .eq('user_id', id)
         .order('day', ascending: true);
 
-    return _profileFromJson(profile, records);
+    return _profileFromJson(profile, records,
+        passedDays: await _passedDays(id));
   }
 
   @override
@@ -127,6 +143,7 @@ class SupabaseRepository implements Repository {
     int? usedMinutes,
     required int limitMinutes,
     String source = 'manual',
+    bool partial = false,
   }) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not signed in');
@@ -138,6 +155,7 @@ class SupabaseRepository implements Repository {
       'used_minutes': usedMinutes,
       'limit_minutes': limitMinutes,
       'source': source,
+      'partial': partial,
       'updated_at': DateTime.now().toIso8601String(),
     }, onConflict: 'user_id,day');
   }
@@ -210,7 +228,11 @@ class SupabaseRepository implements Repository {
     await _supabase.rpc('select_friend', params: {'target': targetId});
   }
 
-  Profile _profileFromJson(Map<String, dynamic> json, List<Map<String, dynamic>> records) {
+  Profile _profileFromJson(
+    Map<String, dynamic> json,
+    List<Map<String, dynamic>> records, {
+    Set<String> passedDays = const {},
+  }) {
     return Profile(
       id: json['id'] as String,
       displayName: json['display_name'] as String? ?? 'Friend',
@@ -220,10 +242,14 @@ class SupabaseRepository implements Repository {
           .map(
             (r) => DailyRecord(
               day: DateTime.parse(r['day'] as String),
-              limitMet: r['limit_met'] as bool,
+              // A day recovered with a pass counts as met, so streaks and
+              // the calendar don't need to know passes exist.
+              limitMet: (r['limit_met'] as bool) ||
+                  passedDays.contains(r['day'] as String),
               limitMinutes: r['limit_minutes'] as int,
               usedMinutes: r['used_minutes'] as int?,
               source: r['source'] as String? ?? 'auto',
+              partial: r['partial'] as bool? ?? false,
             ),
           )
           .toList(),
@@ -422,5 +448,114 @@ class SupabaseRepository implements Repository {
         .subscribe();
     controller.onCancel = () => _supabase.removeChannel(channel);
     return controller.stream;
+  }
+
+  @override
+  Future<List<({DateTime day, String? groupId})>> spentPasses() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+    final rows = await _supabase
+        .from('streak_passes')
+        .select('day, group_id')
+        .eq('user_id', userId);
+    return [
+      for (final r in rows)
+        (
+          day: DateTime.parse(r['day'] as String),
+          groupId: r['group_id'] as String?,
+        ),
+    ];
+  }
+
+  @override
+  Future<void> spendPass(DateTime day, {String? groupId}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+
+    final now = DateTime.now();
+    // Personal: one a week. Group: one a month, per group.
+    final since = groupId == null
+        ? now.subtract(const Duration(days: 7))
+        : DateTime(now.year, now.month, 1);
+
+    var q = _supabase
+        .from('streak_passes')
+        .select('id')
+        .eq('user_id', userId)
+        .gte('created_at', since.toIso8601String());
+    q = groupId == null ? q.isFilter('group_id', null) : q.eq('group_id', groupId);
+
+    final recent = await q;
+    if (recent.isNotEmpty) {
+      throw Exception(groupId == null
+          ? 'No personal pass left this week'
+          : 'This group has used its pass this month');
+    }
+
+    await _supabase.from('streak_passes').insert({
+      'user_id': userId,
+      'group_id': groupId,
+      'day': day.toIso8601String().split('T').first,
+    });
+  }
+
+  @override
+  Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>
+      monitoringSessions() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return const [];
+    try {
+      final rows = await _supabase
+          .from('monitoring_sessions')
+          .select('started_at, ended_at, ended_reason')
+          .eq('user_id', userId)
+          .order('started_at', ascending: false)
+          .limit(50);
+      return [
+        for (final r in rows)
+          (
+            startedAt: DateTime.parse(r['started_at'] as String),
+            endedAt: r['ended_at'] == null
+                ? null
+                : DateTime.parse(r['ended_at'] as String),
+            reason: r['ended_reason'] as String?,
+          ),
+      ];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> logMonitoringOn() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      // Don't stack sessions if one is already open.
+      final open = await _supabase
+          .from('monitoring_sessions')
+          .select('id')
+          .eq('user_id', userId)
+          .isFilter('ended_at', null)
+          .limit(1);
+      if (open.isNotEmpty) return;
+      await _supabase.from('monitoring_sessions').insert({'user_id': userId});
+    } catch (_) {}
+  }
+
+  @override
+  Future<void> logMonitoringOff(String reason) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      await _supabase
+          .from('monitoring_sessions')
+          .update({
+            'ended_at': DateTime.now().toIso8601String(),
+            'ended_reason': reason,
+          })
+          .eq('user_id', userId)
+          .isFilter('ended_at', null);
+    } catch (_) {}
   }
 }

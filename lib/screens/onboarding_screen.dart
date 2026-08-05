@@ -310,7 +310,8 @@ class _TrackingPage extends StatelessWidget {
         if (!enabled) ...[
           const SizedBox(height: 12),
           Text(
-            'You can skip this and set it up later.',
+            'You can skip this and set it up later. Deleting the app stops '
+            "tracking — days it misses won't count.",
             textAlign: TextAlign.center,
             style: appFont(
               fontSize: 13,

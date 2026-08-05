@@ -51,6 +51,7 @@ class LocalRepository implements Repository {
     int? usedMinutes,
     required int limitMinutes,
     String source = 'manual',
+    bool partial = false,
   }) async {
     final me = _people['me']!;
     final d = dateOnly(day);
@@ -433,4 +434,20 @@ class LocalRepository implements Repository {
 
   @override
   Stream<void> recordChanges() => const Stream.empty();
+
+  @override
+  Future<List<({DateTime day, String? groupId})>> spentPasses() async => const [];
+
+  @override
+  Future<void> spendPass(DateTime day, {String? groupId}) async {}
+
+  @override
+  Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>
+      monitoringSessions() async => const [];
+
+  @override
+  Future<void> logMonitoringOn() async {}
+
+  @override
+  Future<void> logMonitoringOff(String reason) async {}
 }

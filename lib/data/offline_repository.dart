@@ -81,6 +81,7 @@ class OfflineRepository implements Repository {
     int? usedMinutes,
     required int limitMinutes,
     String source = 'manual',
+    bool partial = false,
   }) async {
     final record = DailyRecord(
       day: dateOnly(day),
@@ -243,4 +244,23 @@ class OfflineRepository implements Repository {
 
   @override
   Stream<void> recordChanges() => _inner.recordChanges();
+
+  @override
+  Future<List<({DateTime day, String? groupId})>> spentPasses() =>
+      _inner.spentPasses();
+
+  @override
+  Future<void> spendPass(DateTime day, {String? groupId}) =>
+      _inner.spendPass(day, groupId: groupId);
+
+  @override
+  Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>
+      monitoringSessions() => _inner.monitoringSessions();
+
+  @override
+  Future<void> logMonitoringOn() => _inner.logMonitoringOn();
+
+  @override
+  Future<void> logMonitoringOff(String reason) =>
+      _inner.logMonitoringOff(reason);
 }

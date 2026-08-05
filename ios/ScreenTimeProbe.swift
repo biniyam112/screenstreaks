@@ -6,8 +6,14 @@ import UIKit
 
 @available(iOS 16.0, *)
 struct AppPickerView: View {
-    @State var selection = FamilyActivitySelection()
+    @State var selection: FamilyActivitySelection
     var onDone: (FamilyActivitySelection) -> Void
+
+    init(initial: FamilyActivitySelection,
+         onDone: @escaping (FamilyActivitySelection) -> Void) {
+        _selection = State(initialValue: initial)
+        self.onDone = onDone
+    }
 
     var body: some View {
         NavigationView {
@@ -67,9 +73,22 @@ enum ScreenTimeProbe {
                                         message: "No view controller", details: nil))
                     return
                 }
-                let picker = AppPickerView { selection in
+                // Seed the picker with what's already chosen, so reopening it
+                // shows the current selection rather than a blank sheet.
+                restoreSelectionIfNeeded()
+                var current = FamilyActivitySelection()
+                if let saved = UserDefaults(suiteName: suite)?
+                    .data(forKey: "selection"),
+                   let decoded = try? JSONDecoder()
+                    .decode(FamilyActivitySelection.self, from: saved) {
+                    current = decoded
+                }
+                let picker = AppPickerView(initial: current) { selection in
                     if let data = try? JSONEncoder().encode(selection) {
                         UserDefaults(suiteName: suite)?.set(data, forKey: "selection")
+                        // Also keep a copy outside the app group — installs wipe
+                        // the shared container but not the app's own defaults.
+                        UserDefaults.standard.set(data, forKey: "selection_backup")
                     }
                     host.dismiss(animated: true)
                     let apps = selection.applicationTokens.count
@@ -94,11 +113,24 @@ enum ScreenTimeProbe {
                 }
 
             case "hasSelection":
+                restoreSelectionIfNeeded()
                 let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
                 result(data != nil)
 
             case "activeLimit":
                 result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
+
+            case "readPartials":
+                result(UserDefaults(suiteName: suite)?
+                    .stringArray(forKey: "partial_days") ?? [])
+
+            case "clearPartials":
+                let days = (call.arguments as? [String]) ?? []
+                let defaults = UserDefaults(suiteName: suite)
+                var partials = defaults?.stringArray(forKey: "partial_days") ?? []
+                partials.removeAll { days.contains($0) }
+                defaults?.set(partials, forKey: "partial_days")
+                result("cleared \(days.count)")
 
             case "readPending":
                 result(UserDefaults(suiteName: suite)?
@@ -131,7 +163,17 @@ enum ScreenTimeProbe {
         }
     }
 
+    /// Puts the app-group copy back after an install wiped it.
+    static func restoreSelectionIfNeeded() {
+        let defaults = UserDefaults(suiteName: suite)
+        guard defaults?.data(forKey: "selection") == nil,
+              let backup = UserDefaults.standard.data(forKey: "selection_backup")
+        else { return }
+        defaults?.set(backup, forKey: "selection")
+    }
+
     private static func start(thresholdMinutes: Int) throws {
+        restoreSelectionIfNeeded()
         var selection = FamilyActivitySelection()
         if let data = UserDefaults(suiteName: suite)?.data(forKey: "selection"),
            let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self,
@@ -148,17 +190,42 @@ enum ScreenTimeProbe {
             repeats: true
         )
 
-        let activityEvent = DeviceActivityEvent(
-            applications: selection.applicationTokens,
-            categories: selection.categoryTokens,
-            webDomains: selection.webDomainTokens,
-            threshold: DateComponents(minute: thresholdMinutes)
-        )
+        // includesPastActivity counts usage from the interval start rather
+        // than from when monitoring was registered, so starting mid-day picks
+        // up the hours already spent. iOS 17.4+.
+        let activityEvent: DeviceActivityEvent
+        if #available(iOS 17.4, *) {
+            activityEvent = DeviceActivityEvent(
+                applications: selection.applicationTokens,
+                categories: selection.categoryTokens,
+                webDomains: selection.webDomainTokens,
+                threshold: DateComponents(minute: thresholdMinutes),
+                includesPastActivity: true
+            )
+        } else {
+            activityEvent = DeviceActivityEvent(
+                applications: selection.applicationTokens,
+                categories: selection.categoryTokens,
+                webDomains: selection.webDomainTokens,
+                threshold: DateComponents(minute: thresholdMinutes)
+            )
+        }
 
         let center = DeviceActivityCenter()
         center.stopMonitoring([activity])
-        try center.startMonitoring(activity, during: schedule,
-                                   events: [eventName: activityEvent])
+        // A second event 30 minutes short of the limit gives us the
+        // approaching-limit warning; iOS has no separate warning API.
+        let warnMinutes = max(thresholdMinutes - 30, 1)
+        let warnEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            webDomains: selection.webDomainTokens,
+            threshold: DateComponents(minute: warnMinutes)
+        )
+        try center.startMonitoring(activity, during: schedule, events: [
+            eventName: activityEvent,
+            DeviceActivityEvent.Name("streaks.probe.warning"): warnEvent,
+        ])
         let defaults = UserDefaults(suiteName: suite)
         defaults?.set(thresholdMinutes, forKey: "active_limit")
         // Remember when this interval began so a partial first day isn't

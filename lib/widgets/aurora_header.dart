@@ -24,18 +24,7 @@ class AuroraHeader extends StatelessWidget {
     return Container(
       height: height,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color.alphaBlend(tint.withValues(alpha: 0.55), bg),
-            Color.alphaBlend(tint.withValues(alpha: 0.22), bg),
-            bg,
-          ],
-          stops: const [0, 0.5, 1],
-        ),
-      ),
+      decoration: BoxDecoration(color: bg),
       child: SafeArea(
         bottom: false,
         child: Row(

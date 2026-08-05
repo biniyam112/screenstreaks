@@ -35,6 +35,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   List<Profile> _friends = [];
   bool _loading = true;
   bool _monitoring = false;
+  int _passesLeft = 1;
+  Duration? _offSince;
 
   @override
   void initState() {
@@ -66,10 +68,46 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       final me = await repo.me();
       final friends = await repo.friends();
       final savedGoal = await Prefs.goalMinutes();
+      // One personal pass a week.
+      final spent = await repo.spentPasses();
+      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+      final usedThisWeek = spent
+          .where((p) => p.groupId == null && p.day.isAfter(weekAgo))
+          .length;
       final monitoring = await _ensureMonitoring(savedGoal);
+      // Keep the session log honest: open one when tracking is live, close it
+      // when we find it stopped without being told.
+      final sessions = await repo.monitoringSessions();
+      final open = sessions.where((x) => x.endedAt == null).toList();
+      if (monitoring && open.isEmpty) {
+        await repo.logMonitoringOn();
+      } else if (!monitoring && open.isNotEmpty) {
+        await repo.logMonitoringOff('detected');
+      }
+      // Total time tracking was off in the last 24 hours, whether or not
+      // it's running now.
+      final now = DateTime.now();
+      final since = now.subtract(const Duration(hours: 24));
+      var down = Duration.zero;
+      DateTime? cursor;
+      for (final x in sessions.reversed) {
+        // Gap between the end of one session and the start of the next.
+        if (cursor != null && x.startedAt.isAfter(cursor)) {
+          final from = cursor.isAfter(since) ? cursor : since;
+          if (x.startedAt.isAfter(from)) down += x.startedAt.difference(from);
+        }
+        cursor = x.endedAt ?? now;
+      }
+      if (cursor != null && cursor.isBefore(now)) {
+        final from = cursor.isAfter(since) ? cursor : since;
+        down += now.difference(from);
+      }
+      final offSince = down;
       if (!mounted) return;
       setState(() {
         _monitoring = monitoring;
+        _passesLeft = (1 - usedThisWeek).clamp(0, 1);
+        _offSince = offSince;
         _me = me.dailyLimitMinutes == savedGoal
             ? me
             : me.copyWith(dailyLimitMinutes: savedGoal);
@@ -107,6 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       }
       final active = await ScreenTime.activeLimit();
       if (active == goalMinutes) return true;
+      // Covers a fresh install too: the selection is restored above, so this
+      // silently puts monitoring back rather than waiting for a manual tap.
       return await ScreenTime.startMonitoring(goalMinutes);
     } catch (_) {
       return false;
@@ -134,8 +174,120 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         consumed.add(entry.key);
       }
       await ScreenTime.clearPending(consumed);
+
+      // Days monitoring only partly covered: recorded so the user sees the
+      // app working, but they count neither way.
+      final partials = await ScreenTime.partialDays();
+      final donePartials = <String>[];
+      for (final key in partials) {
+        final day = ScreenTime.parseDay(key);
+        if (day == null) continue;
+        await repo.checkIn(
+          day: day,
+          limitMet: false,
+          limitMinutes: limit,
+          source: 'auto',
+          partial: true,
+        );
+        donePartials.add(key);
+      }
+      await ScreenTime.clearPartials(donePartials);
+      await _fillUnmonitoredGaps(repo, limit);
     } catch (_) {
       // Never let a drain failure block loading.
+    }
+  }
+
+  /// Deliberately switching tracking on or off. Off needs confirming — days
+  /// it misses can't be judged, and the streak suffers for it.
+  Future<void> _toggleMonitoring(bool on) async {
+    final repo = RepoScope.of(context);
+    if (on) {
+      await ScreenTime.requestAuthorization();
+      if (!await ScreenTime.hasSelection()) await ScreenTime.pickApps();
+      final ok = await ScreenTime.startMonitoring(await Prefs.goalMinutes());
+      if (ok) {
+        await Prefs.setTrackingEnabled(true);
+        await repo.logMonitoringOn();
+      }
+      if (mounted) _load();
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Stop tracking?',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          "Days while it's off can't be judged — they won't count toward your "
+          'streak, and your group will see the gap.',
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text('Keep tracking',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Stop',
+                style: appFont(
+                    color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ScreenTime.stopMonitoring();
+    await Prefs.setTrackingEnabled(false);
+    await repo.logMonitoringOff('manual');
+    // Today can't be judged once we stop watching it — grey, not a miss.
+    await repo.checkIn(
+      day: DateTime.now(),
+      limitMet: false,
+      limitMinutes: await Prefs.goalMinutes(),
+      source: 'manual',
+      partial: true,
+    );
+    if (mounted) _load();
+  }
+
+  /// Marks past days that have no record at all. Nothing runs while the app
+  /// is closed, so a stretch where monitoring was off leaves gaps — recorded
+  /// as unjudged rather than left blank, which would look like a day still in
+  /// progress.
+  Future<void> _fillUnmonitoredGaps(Repository repo, int limit) async {
+    if (!ScreenTime.supported) return;
+    try {
+      final me = await repo.me();
+      final logged = me.byDay;
+      final today = dateOnly(DateTime.now());
+      if (me.records.isEmpty) return;
+      // Never fill before the first day we have any record for — those days
+      // predate the account rather than representing a monitoring gap.
+      final firstDay = me.records
+          .map((r) => dateOnly(r.day))
+          .reduce((a, b) => a.isBefore(b) ? a : b);
+      // Only look back a week; older gaps aren't worth chasing.
+      for (var i = 1; i <= 7; i++) {
+        final day = today.subtract(Duration(days: i));
+        if (day.isBefore(firstDay)) continue;
+        if (logged.containsKey(day)) continue;
+        await repo.checkIn(
+          day: day,
+          limitMet: false,
+          limitMinutes: limit,
+          source: 'auto',
+          partial: true,
+        );
+      }
+    } catch (_) {
+      // Best effort; retried next launch.
     }
   }
 
@@ -215,15 +367,25 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     showIdentity: false,
                     showLiveUsage: Platform.isAndroid,
                     showProgress: false,
+                    showWeek: false,
+                    passesLeft: _passesLeft,
+                    monitoring: ScreenTime.supported ? _monitoring : null,
+                    offSince: _offSince,
+                    onFixMonitoring: () async {
+                      await ScreenTime.requestAuthorization();
+                      if (!await ScreenTime.hasSelection()) {
+                        await ScreenTime.pickApps();
+                      }
+                      await ScreenTime.startMonitoring(
+                          await Prefs.goalMinutes());
+                      if (mounted) _load();
+                    },
                     onOpenHistory: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => HistoryScreen(profile: _me!),
                       ),
                     ),
                     showTodayStatus: false,
-                    checkInControls: Platform.isAndroid || _monitoring
-                        ? null
-                        : _CheckInButtons(profile: _me!, onChanged: _load),
                   ),
                 ),
               ),

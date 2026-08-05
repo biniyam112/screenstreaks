@@ -12,6 +12,7 @@ class MonthGrid extends StatelessWidget {
     required this.profile,
     required this.month,
     this.showLabels = true,
+    this.onTapDay,
   });
 
   final Profile profile;
@@ -20,6 +21,9 @@ class MonthGrid extends StatelessWidget {
   final DateTime month;
 
   final bool showLabels;
+
+  /// Tapping a logged day — used to spend a pass on a miss.
+  final void Function(DateTime day, DailyRecord? record)? onTapDay;
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +39,17 @@ class MonthGrid extends StatelessWidget {
     }
     for (var d = 1; d <= daysInMonth; d++) {
       final day = DateTime(month.year, month.month, d);
-      cells.add(_Cell(
-        day: day,
-        record: byDay[day],
-        isToday: day == today,
-        isFuture: day.isAfter(today),
+      final record = byDay[day];
+      cells.add(GestureDetector(
+        onTap: onTapDay == null || day.isAfter(today)
+            ? null
+            : () => onTapDay!(day, record),
+        child: _Cell(
+          day: day,
+          record: record,
+          isToday: day == today,
+          isFuture: day.isAfter(today),
+        ),
       ));
     }
 
@@ -103,6 +113,10 @@ class _Cell extends StatelessWidget {
     } else if (record == null) {
       fill = context.cDivider.withValues(alpha: 0.35);
       text = context.cTextTer;
+    } else if (record!.partial) {
+      // Monitoring started mid-day — shown, but not judged.
+      fill = context.cDivider.withValues(alpha: 0.6);
+      text = context.cTextSec;
     } else if (record!.limitMet) {
       fill = AppColors.primary.withValues(alpha: 0.85);
       text = Colors.white;

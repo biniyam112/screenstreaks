@@ -84,6 +84,50 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (v) await Notifications.requestPermission();
   }
 
+  Future<void> _stopTracking() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Stop tracking?',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          "Today won't count toward your streak, and time while it's off is "
+          'visible to your group.',
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text('Keep tracking',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Stop',
+                style: appFont(
+                    color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    final repo = RepoScope.of(context);
+    await ScreenTime.stopMonitoring();
+    await Prefs.setTrackingEnabled(false);
+    await repo.logMonitoringOff('manual');
+    await repo.checkIn(
+      day: DateTime.now(),
+      limitMet: false,
+      limitMinutes: _savedGoal,
+      source: 'manual',
+      partial: true,
+    );
+    await _refreshScreenTime();
+  }
+
   Future<void> _refreshScreenTime() async {
     final has = await ScreenTime.hasSelection();
     final active = await ScreenTime.activeLimit();
@@ -161,6 +205,47 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onChanged: (_) => ThemeScope.of(context).toggleTheme(),
                   ),
                 ),
+                if (ScreenTime.supported && _stLimit > 0) ...[
+                  const SizedBox(height: 34),
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Stop tracking',
+                          style: appFont(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: context.cText,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          "Today won't count either way, and your group sees "
+                          'the gap. You can turn it back on any time.',
+                          style: appFont(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: context.cTextSec,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: _stopTracking,
+                          child: Text(
+                            'Stop tracking',
+                            style: appFont(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (ScreenTime.supported) ...[
                   const SizedBox(height: 24),
                   _SectionLabel('Screen Time'),
@@ -201,6 +286,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   await _refreshScreenTime();
                                 }
                               : null,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Deleting Undr stops tracking. Days it missed '
+                          "won't count, and your streak may break.",
+                          style: appFont(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: context.cTextTer,
+                            height: 1.4,
+                          ),
                         ),
                         if (_stLimit > 0) ...[
                           const SizedBox(height: 12),

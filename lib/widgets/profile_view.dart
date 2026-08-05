@@ -23,8 +23,14 @@ class ProfileView extends StatelessWidget {
     this.showIdentity = true,
     this.showLiveUsage = false,
     this.showProgress = true,
+    this.showWeek = true,
     this.showTodayStatus = true,
     this.onOpenHistory,
+    this.passesLeft,
+    this.monitoring,
+    this.onFixMonitoring,
+    this.onToggleMonitoring,
+    this.offSince,
   });
 
   final Profile profile;
@@ -43,8 +49,28 @@ class ProfileView extends StatelessWidget {
   /// The 126-day grid. Off on the home tab so the page fits without scrolling.
   final bool showProgress;
 
+  /// Recovery passes remaining this week. Hidden when null.
+  final int? passesLeft;
+
+  /// Whether Screen Time monitoring is live. Hidden when null.
+  final bool? monitoring;
+
+  /// Tapping the dot when monitoring is off.
+  final VoidCallback? onFixMonitoring;
+
+  /// Switching tracking on or off deliberately.
+  final ValueChanged<bool>? onToggleMonitoring;
+
+  /// How long tracking has been off, when it is. Null while it's running.
+  final Duration? offSince;
+
+  /// The seven-day strip. Off on the home tab, where the month calendar
+  /// covers the same days and more.
+  final bool showWeek;
+
   /// The today status pill. Off where the daily figure is enough on its own.
   final bool showTodayStatus;
+
 
   /// Tapping the month opens the full history.
   final VoidCallback? onOpenHistory;
@@ -54,6 +80,15 @@ class ProfileView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (monitoring != null) ...[
+          _MonitorDot(
+            live: monitoring!,
+            onTap: onFixMonitoring,
+            onToggle: onToggleMonitoring,
+            offSince: offSince,
+          ),
+          const SizedBox(height: 10),
+        ],
         _HeroCard(
           profile: profile,
           shareButton: shareButton,
@@ -62,11 +97,13 @@ class ProfileView extends StatelessWidget {
           showLiveUsage: showLiveUsage,
           showTodayStatus: showTodayStatus,
         ),
-        const SizedBox(height: 12),
-        _SectionCard(
-          title: 'This week',
-          child: WeekStrip(profile: profile),
-        ),
+        if (showWeek) ...[
+          const SizedBox(height: 12),
+          _SectionCard(
+            title: 'This week',
+            child: WeekStrip(profile: profile),
+          ),
+        ],
         if (showProgress) ...[
           const SizedBox(height: 12),
           _SectionCard(
@@ -82,7 +119,7 @@ class ProfileView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 12),
-        _StatRow(profile: profile),
+        _StatRow(profile: profile, passesLeft: passesLeft),
         const SizedBox(height: 12),
         GestureDetector(
           onTap: onOpenHistory,
@@ -93,6 +130,75 @@ class ProfileView extends StatelessWidget {
         ),
         if (footer != null) ...[const SizedBox(height: 26), footer!],
       ],
+    );
+  }
+}
+
+/// Live indicator — green when Screen Time is watching, red when it isn't.
+class _MonitorDot extends StatelessWidget {
+  const _MonitorDot({
+    required this.live,
+    this.onTap,
+    this.onToggle,
+    this.offSince,
+  });
+
+  final bool live;
+  final VoidCallback? onTap;
+  final ValueChanged<bool>? onToggle;
+  final Duration? offSince;
+
+  /// Total time tracking has been off — shown whether it's live now or not.
+  String get _offFor {
+    final d = offSince;
+    if (d == null) return '0m';
+    if (d.inMinutes < 60) return '${d.inMinutes}m';
+    if (d.inHours < 24) return '${d.inHours}h';
+    return '${d.inDays}d';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = live ? AppColors.primary : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: live ? null : onTap,
+              child: Text(
+                live ? 'Tracking' : 'Not tracking — tap to fix',
+                style: appFont(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
+          ),
+          if (offSince != null)
+            Text(
+              live ? 'was off $_offFor' : _offFor,
+              style: appFont(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: context.cTextTer,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -362,8 +468,9 @@ class _TodayStatus extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _StatRow extends StatelessWidget {
-  const _StatRow({required this.profile});
+  const _StatRow({required this.profile, this.passesLeft});
   final Profile profile;
+  final int? passesLeft;
 
   @override
   Widget build(BuildContext context) {
@@ -372,7 +479,12 @@ class _StatRow extends StatelessWidget {
       _Stat(IconsaxPlusBold.flash_1, '${profile.currentStreak}', 'Streak', AppColors.accent),
       _Stat(IconsaxPlusBold.cup, '${profile.longestStreak}', 'Best', AppColors.info),
       _Stat(IconsaxPlusBold.chart_2, '$rate%', '30d', AppColors.primary),
-      _Stat(IconsaxPlusBold.tick_circle, '${profile.totalMet}', 'Met', AppColors.primary),
+      if (passesLeft != null)
+        _Stat(IconsaxPlusBold.shield_tick, '$passesLeft', 'Passes',
+            AppColors.warning)
+      else
+        _Stat(IconsaxPlusBold.tick_circle, '${profile.totalMet}', 'Met',
+            AppColors.primary),
     ];
     return Row(
       children: [

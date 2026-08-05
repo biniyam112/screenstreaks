@@ -145,6 +145,7 @@ class DailyRecord {
     required this.limitMinutes,
     this.usedMinutes,
     this.source = 'auto',
+    this.partial = false,
   });
 
   final DateTime day;
@@ -155,7 +156,13 @@ class DailyRecord {
   final int? usedMinutes;
   final String source; // 'auto' | 'manual'
 
-  DayStatus get status => limitMet ? DayStatus.met : DayStatus.missed;
+  /// Monitoring only covered part of this day, so the outcome isn't trusted.
+  /// Counts neither for nor against a streak.
+  final bool partial;
+
+  DayStatus get status => partial
+      ? DayStatus.none
+      : (limitMet ? DayStatus.met : DayStatus.missed);
 
   Map<String, dynamic> toJson() => {
     'day': day.toIso8601String(),
@@ -163,6 +170,7 @@ class DailyRecord {
     'limitMinutes': limitMinutes,
     'usedMinutes': usedMinutes,
     'source': source,
+    'partial': partial,
   };
 
   factory DailyRecord.fromJson(Map<String, dynamic> j) => DailyRecord(
@@ -171,6 +179,7 @@ class DailyRecord {
     limitMinutes: j['limitMinutes'] as int,
     usedMinutes: j['usedMinutes'] as int?,
     source: j['source'] as String? ?? 'auto',
+    partial: j['partial'] as bool? ?? false,
   );
 }
 

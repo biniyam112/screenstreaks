@@ -92,4 +92,34 @@ class ScreenTime {
     if (y == null || m == null || d == null) return null;
     return DateTime(y, m, d);
   }
+
+  /// Days monitoring only partly covered — recorded, but not judged.
+  static Future<List<String>> partialDays() async {
+    if (!supported) return const [];
+    try {
+      final raw = await _channel.invokeMethod('readPartials');
+      return (raw as List?)?.map((e) => '$e').toList() ?? const [];
+    } on PlatformException {
+      return const [];
+    }
+  }
+
+  static Future<void> clearPartials(List<String> days) async {
+    if (!supported || days.isEmpty) return;
+    try {
+      await _channel.invokeMethod('clearPartials', days);
+    } on PlatformException {
+      // Retried next launch; writes are idempotent.
+    }
+  }
+
+  /// Stop watching. The active limit drops to 0, so the indicator goes red.
+  static Future<void> stopMonitoring() async {
+    if (!supported) return;
+    try {
+      await _channel.invokeMethod('stop');
+    } on PlatformException {
+      // Already stopped, or the extension isn't registered.
+    }
+  }
 }

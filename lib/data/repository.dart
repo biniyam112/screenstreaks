@@ -73,6 +73,27 @@ abstract class Repository {
   /// A single friend's profile with history.
   Future<Profile> friend(String id);
 
+  /// One stretch where Screen Time monitoring was running.
+  /// [endedAt] is null while it's still live.
+  Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>
+      monitoringSessions() async => const [];
+
+  /// Record that monitoring just started.
+  Future<void> logMonitoringOn() async {}
+
+  /// Close the open session. [reason] is 'manual' when the user switched it
+  /// off, 'detected' when we found it already stopped.
+  Future<void> logMonitoringOff(String reason) async {}
+
+  /// Days you've recovered with a pass, personal and per-group.
+  /// Keys are 'yyyy-MM-dd'; the value is the group id, or null if personal.
+  Future<List<({DateTime day, String? groupId})>> spentPasses() async => const [];
+
+  /// Spend a pass to recover [day]. Pass a group id to save that group's
+  /// streak, or null for your own. Throws if none are left.
+  Future<void> spendPass(DateTime day, {String? groupId}) =>
+      throw UnimplementedError('Passes not supported by this backend');
+
   /// Record today's outcome (manual check-in on iOS, or an automated write).
   Future<void> checkIn({
     required DateTime day,
@@ -80,6 +101,7 @@ abstract class Repository {
     int? usedMinutes,
     required int limitMinutes,
     String source = 'manual',
+    bool partial = false,
   });
 
   /// Update the daily limit goal.

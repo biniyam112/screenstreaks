@@ -1,5 +1,7 @@
 import DeviceActivity
+import FamilyControls
 import Foundation
+import UserNotifications
 
 /// Writes each day's outcome to the shared app group. The Flutter app drains
 /// these on launch and turns them into check-ins.
@@ -32,6 +34,51 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         log("day started")
+        // A DeviceActivityEvent fires once per registration, not once per
+        // interval — so after a threshold is hit the next day goes unwatched
+        // unless we re-arm it here.
+        rearm()
+    }
+
+    /// Re-register the threshold event for the interval that just began.
+    private func rearm() {
+        guard let defaults = defaults else { return }
+        let minutes = defaults.integer(forKey: "active_limit")
+        guard minutes > 0 else { return }
+
+        var selection = FamilyActivitySelection()
+        if let data = defaults.data(forKey: "selection"),
+           let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self,
+                                                   from: data) {
+            selection = decoded
+        }
+        guard !selection.applicationTokens.isEmpty
+                || !selection.categoryTokens.isEmpty
+                || !selection.webDomainTokens.isEmpty else { return }
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 0, minute: 0),
+            intervalEnd: DateComponents(hour: 23, minute: 59),
+            repeats: true
+        )
+        let event = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            webDomains: selection.webDomainTokens,
+            threshold: DateComponents(minute: minutes)
+        )
+
+        let center = DeviceActivityCenter()
+        do {
+            try center.startMonitoring(
+                DeviceActivityName("streaks.probe"),
+                during: schedule,
+                events: [DeviceActivityEvent.Name("streaks.probe.threshold"): event]
+            )
+            log("re-armed at \(minutes)m")
+        } catch {
+            log("re-arm failed: \(error.localizedDescription)")
+        }
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -57,14 +104,38 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                 log("day ended — under limit")
             }
         } else {
-            log("day ended — partial, not recorded")
+            // Monitoring began mid-day, so we can't judge it. Record it as
+            // partial rather than nothing, so the user sees the app working.
+            var partials = defaults?.stringArray(forKey: "partial_days") ?? []
+            if !partials.contains(todayKey) { partials.append(todayKey) }
+            defaults?.set(partials, forKey: "partial_days")
+            log("day ended — partial, not judged")
         }
+    }
+
+    private func notify(_ title: String, _ body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name,
                                          activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
+
+        // The warning event fires 30 minutes short of the limit.
+        if event.rawValue == "streaks.probe.warning" {
+            log("approaching limit")
+            notify("Half an hour left",
+                   "You're 30 minutes from your limit today.")
+            return
+        }
         record(false, for: todayKey)
         log("⚠️ over limit")
+        notify("Over your limit", "Today's streak is broken. Fresh start tomorrow.")
     }
 }
