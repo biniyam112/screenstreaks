@@ -140,8 +140,34 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _pickApps() async {
     await ScreenTime.requestAuthorization();
-    await ScreenTime.pickApps();
+    final apps = await ScreenTime.pickApps();
     await _refreshScreenTime();
+    if (apps > 0 || !mounted) return;
+
+    // Category tokens alone don't reliably trigger a threshold, so a
+    // category-only selection silently watches nothing.
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Pick some apps too',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          "Categories on their own don't reliably count toward your limit. "
+          'Open a category in the picker and select the apps inside it — '
+          'the ones you actually lose time to.',
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text('Got it',
+                style: appFont(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _startTracking() async {

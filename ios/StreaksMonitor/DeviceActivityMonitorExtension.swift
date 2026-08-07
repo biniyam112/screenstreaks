@@ -95,9 +95,10 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // absence of a threshold proves nothing.
         if let started = defaults?.object(forKey: "monitoring_started") as? Date,
            !Calendar.current.isDate(started, inSameDayAs: Date()) {
-            var pending = defaults?.dictionary(forKey: "pending_outcomes")
+            let lost = defaults?.stringArray(forKey: "lost_days") ?? []
+            let pending = defaults?.dictionary(forKey: "pending_outcomes")
                 as? [String: Bool] ?? [:]
-            if pending[todayKey] == false {
+            if lost.contains(todayKey) || pending[todayKey] == false {
                 log("day ended — already over, pass ignored")
             } else {
                 record(true, for: todayKey)
@@ -135,6 +136,12 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
             return
         }
         record(false, for: todayKey)
+        // Remember it independently of the drain queue — pending_outcomes is
+        // cleared once the app reads it, and the day-end guard needs to know
+        // the day was already lost hours later.
+        var lost = defaults?.stringArray(forKey: "lost_days") ?? []
+        if !lost.contains(todayKey) { lost.append(todayKey) }
+        defaults?.set(Array(lost.suffix(30)), forKey: "lost_days")
         log("⚠️ over limit")
         notify("Over your limit", "Today's streak is broken. Fresh start tomorrow.")
     }

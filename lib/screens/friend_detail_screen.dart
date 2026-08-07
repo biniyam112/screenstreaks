@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import '../widgets/profile_view.dart';
 import '../widgets/streak_compare.dart';
+import 'history_screen.dart';
 
 /// A friend's full profile: their limit, weekly strip, progress grid, and a
 /// side-by-side day-by-day comparison against you.
@@ -76,7 +77,19 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ProfileView(profile: _friend!, showIdentity: false),
+                    ProfileView(
+                      profile: _friend!,
+                      showIdentity: false,
+                      // Match the home tab: month calendar, no week strip.
+                      // Passes and the tracking pill stay personal.
+                      showWeek: false,
+                      showProgress: false,
+                      onOpenHistory: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => HistoryScreen(profile: _friend!),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 26),
                     _MatchCard(name: _friend!.displayName.split(' ').first, onMatch: _match),
                     const SizedBox(height: 12),
