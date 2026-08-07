@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,6 +32,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserver {
+  StreamSubscription<void>? _records;
   Profile? _me;
   List<Profile> _friends = [];
   bool _loading = true;
@@ -42,6 +44,18 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _records = RepoScope.of(context).recordChanges().listen((_) {
+        if (mounted) _load();
+      });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _records = RepoScope.of(context).recordChanges().listen((_) {
+        if (mounted) _load();
+      });
+    });
     // Refresh when the profile changes elsewhere (e.g. daily limit saved in
     // Settings), since this tab stays alive in the IndexedStack.
     profileRevision.addListener(_load);
@@ -51,6 +65,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _records?.cancel();
+    _records?.cancel();
     profileRevision.removeListener(_load);
     super.dispose();
   }

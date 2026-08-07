@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class GroupsScreen extends StatefulWidget {
 
 class _GroupsScreenState extends State<GroupsScreen>
     with WidgetsBindingObserver {
+  StreamSubscription<void>? _records;
   List<Group> _groups = const [];
   Map<String, Profile> _people = const {};
   Map<String, int?> _limits = const {};
@@ -40,12 +42,26 @@ class _GroupsScreenState extends State<GroupsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _records = RepoScope.of(context).recordChanges().listen((_) {
+        if (mounted) _load();
+      });
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _records = RepoScope.of(context).recordChanges().listen((_) {
+        if (mounted) _load();
+      });
+    });
     _load();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _records?.cancel();
+    _records?.cancel();
     super.dispose();
   }
 
