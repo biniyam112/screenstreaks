@@ -23,6 +23,7 @@ struct Friend: Codable, Identifiable {
     let name: String
     let streak: Int
     let isMe: Bool
+    let limit: Int?
     var id: String { name }
 }
 
@@ -43,9 +44,9 @@ struct Provider: TimelineProvider {
         StreakEntry(
             date: Date(),
             friends: [
-                Friend(name: "You", streak: 7, isMe: true),
-                Friend(name: "Sam", streak: 5, isMe: false),
-                Friend(name: "Ada", streak: 3, isMe: false),
+                Friend(name: "You", streak: 7, isMe: true, limit: 330),
+                Friend(name: "Sam", streak: 5, isMe: false, limit: 240),
+                Friend(name: "Ada", streak: 3, isMe: false, limit: 180),
             ],
             group: GroupInfo(name: "Work", streak: 12, limit: 180)
         )
@@ -94,17 +95,25 @@ struct StreaksWidgetEntryView: View {
     var capacity: Int { isWide ? 6 : 3 }
 
     func row(_ i: Int, _ f: Friend) -> some View {
-        HStack(spacing: 6) {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
             Text("\(i + 1)")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(i < 3 ? Color.brandPrimary : text.opacity(0.45))
                 .frame(width: 12, alignment: .leading)
 
             Text(f.name)
-                .font(.system(size: 13, weight: f.isMe ? .heavy : .medium))
+                .font(.system(size: 12.5, weight: f.isMe ? .heavy : .medium))
                 .foregroundStyle(f.isMe ? Color.brandPrimary : text)
                 .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .layoutPriority(1)
+                .minimumScaleFactor(0.8)
+
+            if let l = f.limit, l > 0 {
+                Text(formatLimit(l))
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(text.opacity(0.38))
+                    .lineLimit(1)
+            }
 
             Spacer(minLength: 4)
 
@@ -143,13 +152,13 @@ struct StreaksWidgetEntryView: View {
                 Spacer(minLength: 8)
 
                 HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 7) {
+                    VStack(alignment: .leading, spacing: 11) {
                         ForEach(left, id: \.element.id) { i, f in row(i, f) }
                     }
                     .frame(maxWidth: .infinity)
 
                     if isWide && !right.isEmpty {
-                        VStack(alignment: .leading, spacing: 7) {
+                        VStack(alignment: .leading, spacing: 11) {
                             ForEach(right, id: \.element.id) { i, f in row(i, f) }
                         }
                         .frame(maxWidth: .infinity)

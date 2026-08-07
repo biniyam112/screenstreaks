@@ -106,7 +106,7 @@ class GoalPicker extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   static const _min = 30;
-  static const _max = 480;
+  static const _max = 1440;
   static const _step = 30;
   static const _presets = [60, 90, 120, 180, 240];
 

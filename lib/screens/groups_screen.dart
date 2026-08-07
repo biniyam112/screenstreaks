@@ -124,6 +124,7 @@ class _GroupsScreenState extends State<GroupsScreen>
                   'name': p.displayName,
                   'streak': p.currentStreak,
                   'isMe': p.isMe,
+                  'limit': p.dailyLimitMinutes,
                 })
             .toList()),
       );

@@ -70,10 +70,21 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
         let center = DeviceActivityCenter()
         do {
+            // Re-register the warning too, or approaching-limit alerts stop
+            // after the first midnight.
+            let warnEvent = DeviceActivityEvent(
+                applications: selection.applicationTokens,
+                categories: selection.categoryTokens,
+                webDomains: selection.webDomainTokens,
+                threshold: DateComponents(minute: max(minutes - 30, 1))
+            )
             try center.startMonitoring(
                 DeviceActivityName("streaks.probe"),
                 during: schedule,
-                events: [DeviceActivityEvent.Name("streaks.probe.threshold"): event]
+                events: [
+                    DeviceActivityEvent.Name("streaks.probe.threshold"): event,
+                    DeviceActivityEvent.Name("streaks.probe.warning"): warnEvent,
+                ]
             )
             log("re-armed at \(minutes)m")
         } catch {
