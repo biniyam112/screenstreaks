@@ -145,6 +145,15 @@ enum ScreenTimeProbe {
                 defaults?.set(pending, forKey: "pending_outcomes")
                 result("cleared \(days.count)")
 
+            case "lastCallback":
+                // Newest entry in the extension's log, as epoch seconds.
+                // Lets the app spot a monitor that's live but silent.
+                let entries = UserDefaults(suiteName: suite)?
+                    .stringArray(forKey: "probe_log") ?? []
+                let stamp = UserDefaults(suiteName: suite)?
+                    .double(forKey: "last_callback_at") ?? 0
+                result(entries.isEmpty ? 0 : stamp)
+
             case "readLog":
                 result(UserDefaults(suiteName: suite)?
                     .stringArray(forKey: "probe_log") ?? [])

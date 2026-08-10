@@ -29,6 +29,8 @@ class ProfileView extends StatelessWidget {
     this.passesLeft,
     this.monitoring,
     this.onFixMonitoring,
+    this.stale = false,
+    this.onRefreshMonitoring,
     this.onToggleMonitoring,
     this.offSince,
   });
@@ -58,6 +60,12 @@ class ProfileView extends StatelessWidget {
   /// Tapping the dot when monitoring is off.
   final VoidCallback? onFixMonitoring;
 
+  /// Monitoring is registered but hasn't reported in days.
+  final bool stale;
+
+  /// Re-registering a stale monitor.
+  final VoidCallback? onRefreshMonitoring;
+
   /// Switching tracking on or off deliberately.
   final ValueChanged<bool>? onToggleMonitoring;
 
@@ -80,6 +88,36 @@ class ProfileView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (stale) ...[
+          GestureDetector(
+            onTap: onRefreshMonitoring,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(IconsaxPlusBold.warning_2,
+                      size: 18, color: AppColors.warning),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Tracking hasn't reported in a while. Tap to reconnect.",
+                      style: appFont(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         if (monitoring != null) ...[
           _MonitorDot(
             live: monitoring!,

@@ -22,7 +22,11 @@ String fmtLimit(int m) {
 }
 
 class GroupsScreen extends StatefulWidget {
-  const GroupsScreen({super.key});
+  const GroupsScreen({super.key, this.embedded = false});
+
+  /// When true, renders the list alone — no Scaffold or AppBar — so it can
+  /// sit inside another screen.
+  final bool embedded;
 
   @override
   State<GroupsScreen> createState() => _GroupsScreenState();
@@ -236,33 +240,10 @@ class _GroupsScreenState extends State<GroupsScreen>
     _load();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          AuroraHeader(
-            title: 'Groups',
-            tint: AppColors.info,
-            trailing: GestureDetector(
-              onTap: _createGroup,
-              child: Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.info.withValues(alpha: 0.22),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(IconsaxPlusLinear.add,
-                    size: 18, color: AppColors.info),
-              ),
-            ),
-          ),
-          Expanded(
-            child: SafeArea(
-              top: false,
-        child: _loading
+  /// The list itself — shared by the standalone tab and the embedded
+  /// version inside Social.
+  Widget _body(BuildContext context) {
+    return _loading
             ? const Center(child: CircularProgressIndicator())
             : _groups.isEmpty && _invites.isEmpty
                 ? _EmptyGroups(onCreate: _createGroup)
@@ -339,7 +320,38 @@ class _GroupsScreenState extends State<GroupsScreen>
                     ),
                   );
                 },
+              );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.embedded) return _body(context);
+
+    return Scaffold(
+      body: Column(
+        children: [
+          AuroraHeader(
+            title: 'Groups',
+            tint: AppColors.info,
+            trailing: GestureDetector(
+              onTap: _createGroup,
+              child: Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.info.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(IconsaxPlusLinear.add,
+                    size: 18, color: AppColors.info),
               ),
+            ),
+          ),
+          Expanded(
+            child: SafeArea(
+              top: false,
+        child: _body(context),
             ),
           ),
         ],

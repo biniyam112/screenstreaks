@@ -39,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   bool _monitoring = false;
   int _passesLeft = 1;
   Duration? _offSince;
+  bool _stale = false;
 
   @override
   void initState() {
@@ -91,6 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
           .where((p) => p.groupId == null && p.day.isAfter(weekAgo))
           .length;
       final monitoring = await _ensureMonitoring(savedGoal);
+      // A monitor that's registered but hasn't woken in days isn't watching
+      // anything — the interval callbacks alone should fire daily.
+      final stale = await ScreenTime.looksStale();
       // Keep the session log honest: open one when tracking is live, close it
       // when we find it stopped without being told.
       final sessions = await repo.monitoringSessions();
@@ -124,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         _monitoring = monitoring;
         _passesLeft = (1 - usedThisWeek).clamp(0, 1);
         _offSince = offSince;
+        _stale = stale;
         _me = me.dailyLimitMinutes == savedGoal
             ? me
             : me.copyWith(dailyLimitMinutes: savedGoal);
@@ -212,6 +217,13 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     } catch (_) {
       // Never let a drain failure block loading.
     }
+  }
+
+  /// Re-register the monitor with the selection we already have. Fixes a
+  /// stale registration without making the user pick apps again.
+  Future<void> _refreshMonitoring() async {
+    await ScreenTime.startMonitoring(await Prefs.goalMinutes());
+    if (mounted) _load();
   }
 
   /// Deliberately switching tracking on or off. Off needs confirming — days
@@ -386,6 +398,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     showWeek: false,
                     passesLeft: _passesLeft,
                     monitoring: ScreenTime.supported ? _monitoring : null,
+                    stale: _stale,
+                    onRefreshMonitoring: _refreshMonitoring,
                     offSince: _offSince,
                     onFixMonitoring: () async {
                       await ScreenTime.requestAuthorization();

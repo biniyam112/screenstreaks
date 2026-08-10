@@ -126,4 +126,29 @@ class ScreenTime {
       // Already stopped, or the extension isn't registered.
     }
   }
+
+  /// When the monitor extension last woke, or null if it never has.
+  /// A live monitor that hasn't fired in days is broken, not quiet.
+  static Future<DateTime?> lastCallback() async {
+    if (!supported) return null;
+    try {
+      final secs = await _channel.invokeMethod('lastCallback');
+      final v = (secs as num?)?.toDouble() ?? 0;
+      if (v <= 0) return null;
+      return DateTime.fromMillisecondsSinceEpoch((v * 1000).round());
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// True when monitoring claims to be running but nothing has come back for
+  /// [days]. The interval callbacks alone should fire daily, so silence that
+  /// long means the registration has gone stale.
+  static Future<bool> looksStale({int days = 2}) async {
+    if (!supported) return false;
+    if (await activeLimit() <= 0) return false;
+    final last = await lastCallback();
+    if (last == null) return false;
+    return DateTime.now().difference(last).inDays >= days;
+  }
 }

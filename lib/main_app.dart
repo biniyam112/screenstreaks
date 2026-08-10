@@ -11,8 +11,7 @@ import 'screens/profile_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'services/prefs.dart';
 import 'theme_provider.dart';
-import 'screens/groups_screen.dart';
-import 'screens/probe_screen.dart';
+import 'screens/social_screen.dart';
 
 /// Exposes sign-out to descendant screens (e.g. SettingsScreen).
 class AuthScope extends InheritedWidget {
@@ -145,12 +144,13 @@ class _RootShellState extends State<RootShell> {
         onSeeFriends: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const FriendsScreen()),
         ),
-        onProfile: () => setState(() => _index = 3),
+        // Profile lives behind the avatar on My Streak, not in the bar.
+        onProfile: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AccountScreen()),
+        ),
       ),
       const FeedScreen(),
-      const GroupsScreen(),
-      const AccountScreen(),
-      const ProbeScreen(),
+      const SocialScreen(),
     ];
 
     return Scaffold(
@@ -171,9 +171,7 @@ class _RootShellState extends State<RootShell> {
           destinations: [
             _navItem(context, IconsaxPlusBold.flash_1, 'My streak', AppColors.accent),
             _navItem(context, IconsaxPlusBold.heart, 'Feed', const Color(0xFFEC4899)),
-            _navItem(context, IconsaxPlusBold.people, 'Groups', AppColors.primary),
-            _navItem(context, IconsaxPlusBold.user, 'Profile', const Color(0xFF8B5CF6)),
-            _navItem(context, IconsaxPlusBold.code_1, 'Probe', AppColors.danger),
+            _navItem(context, IconsaxPlusBold.people, 'Social', AppColors.primary),
           ],
         ),
       ),

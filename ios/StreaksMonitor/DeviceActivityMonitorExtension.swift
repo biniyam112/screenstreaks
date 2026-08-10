@@ -18,6 +18,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private func log(_ line: String) {
         let f = DateFormatter()
         f.dateFormat = "MM-dd HH:mm:ss"
+        defaults?.set(Date().timeIntervalSince1970, forKey: "last_callback_at")
         var entries = defaults?.stringArray(forKey: "probe_log") ?? []
         entries.append("\(f.string(from: Date()))  \(line)")
         defaults?.set(Array(entries.suffix(40)), forKey: "probe_log")
