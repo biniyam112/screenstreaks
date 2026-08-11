@@ -104,12 +104,21 @@ enum ScreenTimeProbe {
 
             case "startProbe":
                 let minutes = (call.arguments as? Int) ?? 2
-                do {
-                    try start(thresholdMinutes: minutes)
-                    result("monitoring — threshold \(minutes)m")
-                } catch {
-                    result(FlutterError(code: "start_failed",
-                                        message: "\(error)", details: nil))
+                // startMonitoring blocks on a system service, so keep it off
+                // the main thread or the UI hitches while it registers.
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try start(thresholdMinutes: minutes)
+                        DispatchQueue.main.async {
+                            result("monitoring — threshold \(minutes)m")
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            result(FlutterError(code: "start_failed",
+                                                message: "\(error)",
+                                                details: nil))
+                        }
+                    }
                 }
 
             case "appGroupPath":

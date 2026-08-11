@@ -7,6 +7,7 @@ import 'progress_grid.dart';
 import 'usage_gauge.dart';
 import 'week_strip.dart';
 import 'month_grid.dart';
+import 'screen_time_report.dart';
 
 /// Reusable profile body used on the home screen and friend detail pages.
 ///
@@ -163,6 +164,13 @@ class ProfileView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 12),
+        if (showTodayStatus == false && onOpenHistory != null)
+          _SectionCard(
+            title: 'Screen Time says',
+            child: const ScreenTimeReport(),
+          ),
+        if (showTodayStatus == false && onOpenHistory != null)
+          const SizedBox(height: 12),
         _StatRow(profile: profile, passesLeft: passesLeft),
         const SizedBox(height: 12),
         GestureDetector(

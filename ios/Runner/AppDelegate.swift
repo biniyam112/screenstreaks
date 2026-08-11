@@ -15,6 +15,10 @@ import UIKit
     if #available(iOS 16.0, *),
        let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ScreenTimeProbe") {
       ScreenTimeProbe.register(messenger: registrar.messenger())
+      if #available(iOS 16.0, *) {
+        registrar.register(ScreenTimeReportFactory(),
+                           withId: "screenstreaks/report")
+      }
     }
   }
 }
