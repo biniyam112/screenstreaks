@@ -112,6 +112,13 @@ enum ScreenTimeProbe {
                                         message: "\(error)", details: nil))
                 }
 
+            case "appGroupPath":
+                // Where Dart should write cached avatar files so WidgetKit
+                // can read them — widgets have no network access.
+                let url = FileManager.default.containerURL(
+                    forSecurityApplicationGroupIdentifier: suite)
+                result(url?.path ?? "")
+
             case "hasSelection":
                 restoreSelectionIfNeeded()
                 let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")

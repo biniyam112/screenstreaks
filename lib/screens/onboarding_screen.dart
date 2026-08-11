@@ -23,7 +23,9 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _pageController = PageController();
-  final _nameController = TextEditingController();
+  final _firstController = TextEditingController();
+  final _lastController = TextEditingController();
+  final _nicknameController = TextEditingController();
 
   int _page = 0;
   bool _tracking = false;
@@ -40,7 +42,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    _nameController.dispose();
+    _firstController.dispose();
+    _lastController.dispose();
+    _nicknameController.dispose();
     super.dispose();
   }
 
@@ -53,8 +57,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() {
         _limit = savedGoal;
         // Google name lands here via sign-in; blank if it was the default.
-        _nameController.text =
-            me.displayName == 'Friend' ? '' : me.displayName;
+        // Prefilled from Google when that's how they signed in.
+        final parts = me.displayName == 'Friend'
+            ? const <String>[]
+            : me.displayName.trim().split(RegExp(r'\s+'));
+        _firstController.text = parts.isNotEmpty ? parts.first : '';
+        _lastController.text = parts.length > 1 ? parts.last : '';
         _loading = false;
       });
     } catch (_) {
@@ -103,13 +111,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
-    final name = _nameController.text.trim();
+    final first = _firstController.text.trim();
+    final last = _lastController.text.trim();
+    final nick = _nicknameController.text.trim();
+    final name = [first, last].where((x) => x.isNotEmpty).join(' ');
     setState(() => _saving = true);
     final repo = RepoScope.of(context);
     try {
       await repo.setDailyLimit(_limit);
       await Prefs.setGoalMinutes(_limit);
-      if (name.isNotEmpty) await repo.setDisplayName(name);
+      if (first.isNotEmpty || last.isNotEmpty || nick.isNotEmpty) {
+        await repo.setNames(
+          firstName: first,
+          lastName: last,
+          nickname: nick,
+        );
+      } else if (name.isNotEmpty) {
+        await repo.setDisplayName(name);
+      }
       await Prefs.setOnboarded(true);
       notifyProfileChanged();
       if (!mounted) return;
@@ -170,7 +189,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     limit: _limit,
                     onChanged: (v) => setState(() => _limit = v),
                   ),
-                  _NamePage(controller: _nameController),
+                  _NamePage(
+                    first: _firstController,
+                    last: _lastController,
+                    nickname: _nicknameController,
+                  ),
                   if (ScreenTime.supported)
                     _TrackingPage(
                       enabled: _tracking,
@@ -335,8 +358,15 @@ class _TrackingPage extends StatelessWidget {
 }
 
 class _NamePage extends StatelessWidget {
-  const _NamePage({required this.controller});
-  final TextEditingController controller;
+  const _NamePage({
+    required this.first,
+    required this.last,
+    required this.nickname,
+  });
+
+  final TextEditingController first;
+  final TextEditingController last;
+  final TextEditingController nickname;
 
   @override
   Widget build(BuildContext context) {
@@ -373,33 +403,78 @@ class _NamePage extends StatelessWidget {
             height: 1.45,
           ),
         ),
-        const SizedBox(height: 32),
-        TextField(
-          controller: controller,
+        const SizedBox(height: 28),
+        _NameField(controller: first, hint: 'First name'),
+        const SizedBox(height: 12),
+        _NameField(controller: last, hint: 'Last name'),
+        const SizedBox(height: 24),
+        Text(
+          'Widget nickname',
           textAlign: TextAlign.center,
-          textCapitalization: TextCapitalization.words,
           style: appFont(
-              fontSize: 20, fontWeight: FontWeight.w700, color: context.cText),
-          decoration: InputDecoration(
-            hintText: 'Your name',
-            hintStyle: appFont(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: context.cTextTer),
-            filled: true,
-            fillColor: context.cSurface,
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: context.cDivider),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
-            ),
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: context.cTextSec,
           ),
         ),
+        const SizedBox(height: 6),
+        Text(
+          "Four characters, shown on the home-screen widget where there's "
+          "no room for a full name. Skip it and we'll use your initials.",
+          textAlign: TextAlign.center,
+          style: appFont(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: context.cTextTer,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _NameField(controller: nickname, hint: 'e.g. Hern', maxLength: 4),
       ],
+    );
+  }
+}
+
+class _NameField extends StatelessWidget {
+  const _NameField({
+    required this.controller,
+    required this.hint,
+    this.maxLength,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final int? maxLength;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textAlign: TextAlign.center,
+      textCapitalization: TextCapitalization.words,
+      maxLength: maxLength,
+      style: appFont(
+          fontSize: 20, fontWeight: FontWeight.w700, color: context.cText),
+      decoration: InputDecoration(
+        hintText: hint,
+        counterText: '',
+        hintStyle: appFont(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: context.cTextTer),
+        filled: true,
+        fillColor: context.cSurface,
+        contentPadding: const EdgeInsets.symmetric(vertical: 18),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: context.cDivider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.6),
+        ),
+      ),
     );
   }
 }

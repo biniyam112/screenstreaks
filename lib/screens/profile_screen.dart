@@ -353,24 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                 ? null
                 : GestureDetector(
                     onTap: widget.onProfile,
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: (_me!.avatarColor ?? AppColors.primary)
-                            .withValues(alpha: 0.22),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        _me!.initials,
-                        style: appFont(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: _me!.avatarColor ?? AppColors.primary,
-                        ),
-                      ),
-                    ),
+                    child: Avatar(profile: _me!, size: 34),
                   ),
           ),
           Expanded(

@@ -240,6 +240,9 @@ class SupabaseRepository implements Repository {
       shareCode: json['share_code'] as String? ?? '',
       dailyLimitMinutes: json['daily_limit_minutes'] as int? ?? 120,
       avatarUrl: json['avatar_url'] as String?,
+      firstName: json['first_name'] as String?,
+      lastName: json['last_name'] as String?,
+      nickname: json['nickname'] as String?,
       records: records
           .map(
             (r) => DailyRecord(
@@ -578,5 +581,27 @@ class SupabaseRepository implements Repository {
     final base = _supabase.storage.from('Avatars').getPublicUrl(path);
     final url = base + '?v=' + DateTime.now().millisecondsSinceEpoch.toString();
     await _supabase.from('profiles').update({'avatar_url': url}).eq('id', userId);
+  }
+
+  @override
+  Future<void> setNames({
+    String? firstName,
+    String? lastName,
+    String? nickname,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+
+    final patch = <String, dynamic>{};
+    if (firstName != null) patch['first_name'] = firstName;
+    if (lastName != null) patch['last_name'] = lastName;
+    if (nickname != null) patch['nickname'] = nickname.isEmpty ? null : nickname;
+    // Keep display_name in step so the rest of the app is unchanged.
+    if (firstName != null || lastName != null) {
+      patch['display_name'] =
+          [firstName ?? '', lastName ?? ''].where((x) => x.isNotEmpty).join(' ');
+    }
+    if (patch.isEmpty) return;
+    await _supabase.from('profiles').update(patch).eq('id', userId);
   }
 }

@@ -24,6 +24,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   int _goal = 120;
+  final _first = TextEditingController();
+  final _last = TextEditingController();
+  final _nick = TextEditingController();
   bool _stHasApps = false;
   int _stLimit = 0; // current picker value (unsaved)
   int _savedGoal = 120; // last value persisted to the backend
@@ -50,6 +53,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _load() async {
+    final me = await RepoScope.of(context).me();
+    if (!mounted) return;
     final notif = await Prefs.notificationsEnabled();
     final perm = await UsageService.hasPermission();
     // Prefs survives restarts; LocalRepository doesn't. Prefer the persisted
@@ -58,6 +63,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() {
       _goal = savedGoal;
+      _first.text = me.firstName ?? '';
+      _last.text = me.lastName ?? '';
+      _nick.text = me.nickname ?? '';
       _savedGoal = savedGoal;
       _notif = notif;
       _hasPermission = perm;
@@ -82,6 +90,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() => _notif = v);
     await Prefs.setNotificationsEnabled(v);
     if (v) await Notifications.requestPermission();
+  }
+
+  Future<void> _saveNames() async {
+    final repo = RepoScope.of(context);
+    await repo.setNames(
+      firstName: _first.text.trim(),
+      lastName: _last.text.trim(),
+      nickname: _nick.text.trim(),
+    );
+    notifyProfileChanged();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Name saved')),
+    );
   }
 
   Future<void> _stopTracking() async {
@@ -189,6 +211,40 @@ class _SettingsScreenState extends State<SettingsScreen>
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
+                _SectionLabel('Your name'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      _SettingsField(controller: _first, hint: 'First name'),
+                      const SizedBox(height: 10),
+                      _SettingsField(controller: _last, hint: 'Last name'),
+                      const SizedBox(height: 10),
+                      _SettingsField(
+                        controller: _nick,
+                        hint: 'Widget nickname (4 characters)',
+                        maxLength: 4,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Shown on the home-screen widget where there's no room "
+                        'for a full name. Leave it blank to use your initials.',
+                        style: appFont(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: context.cTextTer,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ModernButton(
+                  label: 'Save name',
+                  icon: IconsaxPlusBold.tick_circle,
+                  onPressed: _saveNames,
+                ),
+                const SizedBox(height: 24),
                 _SectionLabel('Daily limit'),
                 AppCard(
                   padding:
@@ -487,6 +543,47 @@ class _SectionLabel extends StatelessWidget {
           fontWeight: FontWeight.w700,
           fontSize: 12,
           letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact text field for the settings form.
+class _SettingsField extends StatelessWidget {
+  const _SettingsField({
+    required this.controller,
+    required this.hint,
+    this.maxLength,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final int? maxLength;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      textCapitalization: TextCapitalization.words,
+      maxLength: maxLength,
+      style: appFont(
+          fontSize: 15, fontWeight: FontWeight.w600, color: context.cText),
+      decoration: InputDecoration(
+        hintText: hint,
+        counterText: '',
+        isDense: true,
+        hintStyle: appFont(
+            fontSize: 15, fontWeight: FontWeight.w500, color: context.cTextTer),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.cDivider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );

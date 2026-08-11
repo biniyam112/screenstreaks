@@ -193,6 +193,9 @@ class Profile {
     required this.records,
     this.avatarColor,
     this.avatarUrl,
+    this.firstName,
+    this.lastName,
+    this.nickname,
     this.isMe = false,
   });
 
@@ -207,6 +210,26 @@ class Profile {
 
   /// Uploaded profile picture, or null when we fall back to initials.
   final String? avatarUrl;
+
+  final String? firstName;
+  final String? lastName;
+
+  /// Short label for the widget, up to four characters. When empty we fall
+  /// back to initials built from the name.
+  final String? nickname;
+
+  /// What the widget shows: the nickname if set, else initials.
+  String get shortLabel {
+    final n = nickname?.trim();
+    if (n != null && n.isNotEmpty) return n;
+    final f = (firstName ?? '').trim();
+    final l = (lastName ?? '').trim();
+    if (f.isNotEmpty || l.isNotEmpty) {
+      return (f.isEmpty ? '' : f[0].toUpperCase()) +
+          (l.isEmpty ? '' : l[0].toUpperCase());
+    }
+    return initials;
+  }
   final bool isMe;
 
   String get initials {
@@ -225,6 +248,9 @@ class Profile {
         records: records ?? this.records,
         avatarColor: avatarColor,
         avatarUrl: avatarUrl,
+        firstName: firstName,
+        lastName: lastName,
+        nickname: nickname,
         isMe: isMe,
       );
 
@@ -235,6 +261,9 @@ class Profile {
     'dailyLimitMinutes': dailyLimitMinutes,
     'avatarColor': avatarColor?.toARGB32(),
     'avatarUrl': avatarUrl,
+    'firstName': firstName,
+    'lastName': lastName,
+    'nickname': nickname,
     'isMe': isMe,
     'records': records.map((r) => r.toJson()).toList(),
   };
@@ -246,6 +275,9 @@ class Profile {
     dailyLimitMinutes: j['dailyLimitMinutes'] as int,
     avatarColor: j['avatarColor'] != null ? Color(j['avatarColor'] as int) : null,
     avatarUrl: j['avatarUrl'] as String?,
+    firstName: j['firstName'] as String?,
+    lastName: j['lastName'] as String?,
+    nickname: j['nickname'] as String?,
     isMe: j['isMe'] as bool? ?? false,
     records: (j['records'] as List)
         .map((e) => DailyRecord.fromJson(e as Map<String, dynamic>))

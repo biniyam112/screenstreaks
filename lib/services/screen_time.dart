@@ -164,4 +164,16 @@ class ScreenTime {
       return null;
     }
   }
+
+  /// Shared container path. Widgets can't fetch URLs, so avatars are
+  /// downloaded here and read from disk by the extension.
+  static Future<String?> appGroupPath() async {
+    if (!supported) return null;
+    try {
+      final path = await _channel.invokeMethod('appGroupPath') as String?;
+      return (path == null || path.isEmpty) ? null : path;
+    } on PlatformException {
+      return null;
+    }
+  }
 }

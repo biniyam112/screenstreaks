@@ -267,4 +267,9 @@ class OfflineRepository implements Repository {
   @override
   Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) =>
       _inner.setAvatar(bytes, ext: ext);
+
+  @override
+  Future<void> setNames({String? firstName, String? lastName, String? nickname}) =>
+      _inner.setNames(
+          firstName: firstName, lastName: lastName, nickname: nickname);
 }

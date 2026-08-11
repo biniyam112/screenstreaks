@@ -13,10 +13,29 @@ extension Color {
     static let textLight    = Color(red: 0.086, green: 0.086, blue: 0.102) // #16161A
 }
 
+/// "6 people · under 4h" — the supporting line under the group name.
+func footerDetail(_ g: GroupInfo) -> String {
+    var parts: [String] = []
+    if let m = g.members, m > 0 { parts.append("\(m) people") }
+    if g.limit > 0 { parts.append("under " + formatLimit(g.limit)) }
+    return parts.joined(separator: " · ")
+}
+
 func formatLimit(_ minutes: Int) -> String {
     let h = minutes / 60, m = minutes % 60
     if h == 0 { return "\(m)m" }
-    return m == 0 ? "\(h)h" : "\(h)h \(m)m"
+    return m == 0 ? "\(h)h" : "\(h)h\(String(format: "%02d", m))"
+}
+
+/// Names longer than the row can hold collapse to initials — "Hernando
+/// Sierra" becomes "H.S." rather than being cut mid-word.
+func shortName(_ name: String, max: Int) -> String {
+    if name.count <= max { return name }
+    let parts = name.split(separator: " ").filter { !$0.isEmpty }
+    if parts.isEmpty { return name }
+    return parts.prefix(2)
+        .map { String($0.prefix(1)).uppercased() }
+        .joined()
 }
 
 struct Friend: Codable, Identifiable {
@@ -24,6 +43,7 @@ struct Friend: Codable, Identifiable {
     let streak: Int
     let isMe: Bool
     let limit: Int?
+    let photo: String?
     var id: String { name }
 }
 
@@ -31,6 +51,7 @@ struct GroupInfo: Codable {
     let name: String?
     let streak: Int
     let limit: Int
+    let members: Int?
 }
 
 struct StreakEntry: TimelineEntry {
@@ -44,11 +65,11 @@ struct Provider: TimelineProvider {
         StreakEntry(
             date: Date(),
             friends: [
-                Friend(name: "You", streak: 7, isMe: true, limit: 330),
-                Friend(name: "Sam", streak: 5, isMe: false, limit: 240),
-                Friend(name: "Ada", streak: 3, isMe: false, limit: 180),
+                Friend(name: "You", streak: 7, isMe: true, limit: 330, photo: nil),
+                Friend(name: "Sam", streak: 5, isMe: false, limit: 240, photo: nil),
+                Friend(name: "Ada", streak: 3, isMe: false, limit: 180, photo: nil),
             ],
-            group: GroupInfo(name: "Work", streak: 12, limit: 180)
+            group: GroupInfo(name: "Work", streak: 12, limit: 180, members: 5)
         )
     }
 
@@ -82,6 +103,46 @@ struct Provider: TimelineProvider {
     }
 }
 
+/// Cached photo from the app group, or coloured initials as a fallback.
+struct WidgetAvatar: View {
+    let friend: Friend
+    let size: CGFloat
+    let text: Color
+
+    private var initials: String {
+        let parts = friend.name.split(separator: " ")
+        if parts.isEmpty { return "?" }
+        if parts.count == 1 { return String(parts[0].prefix(1)).uppercased() }
+        return (String(parts[0].prefix(1)) + String(parts[parts.count - 1].prefix(1)))
+            .uppercased()
+    }
+
+    private var image: UIImage? {
+        guard let name = friend.photo,
+              let dir = FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier:
+                    "group.com.screenstreaks.screenstreaks")
+        else { return nil }
+        return UIImage(contentsOfFile: dir.appendingPathComponent(name).path)
+    }
+
+    var body: some View {
+        Group {
+            if let img = image {
+                Image(uiImage: img).resizable().scaledToFill()
+            } else {
+                Text(initials)
+                    .font(.system(size: size * 0.36, weight: .bold))
+                    .foregroundStyle(friend.isMe ? Color.brandPrimary
+                                                 : text.opacity(0.6))
+            }
+        }
+        .frame(width: size, height: size)
+        .background(text.opacity(0.1))
+        .clipShape(Circle())
+    }
+}
+
 struct StreaksWidgetEntryView: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.widgetFamily) var family
@@ -94,35 +155,42 @@ struct StreaksWidgetEntryView: View {
     var isWide: Bool { family != .systemSmall }
     var capacity: Int { isWide ? 6 : 3 }
 
+    /// Longest name the row can hold before it crowds the columns.
+    var maxNameChars: Int { isWide ? 13 : 7 }
+
     func row(_ i: Int, _ f: Friend) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-            Text("\(i + 1)")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(i < 3 ? Color.brandPrimary : text.opacity(0.45))
-                .frame(width: 12, alignment: .leading)
+        HStack(spacing: 0) {
+            WidgetAvatar(friend: f, size: 24, text: text)
 
             Text(f.name)
-                .font(.system(size: 12.5, weight: f.isMe ? .heavy : .medium))
+                .font(.system(size: 13, weight: f.isMe ? .heavy : .medium))
                 .foregroundStyle(f.isMe ? Color.brandPrimary : text)
                 .lineLimit(1)
-                .layoutPriority(1)
-                .minimumScaleFactor(0.8)
-
-            if let l = f.limit, l > 0 {
-                Text(formatLimit(l))
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(text.opacity(0.38))
-                    .lineLimit(1)
-            }
+                .padding(.leading, 8)
 
             Spacer(minLength: 4)
 
+            // Fixed columns so the streak numbers line up whatever the
+            // name length.
+            if let l = f.limit, l > 0 {
+                Text(formatLimit(l))
+                    .font(.system(size: 9.5, weight: .medium))
+                    .foregroundStyle(text.opacity(0.38))
+                    .frame(width: 32, alignment: .trailing)
+            } else {
+                Spacer().frame(width: 32)
+            }
+
             Text("\(f.streak)")
-                .font(.system(size: 13, weight: .heavy))
+                .font(.system(size: 14, weight: .heavy))
                 .foregroundStyle(text)
+                .frame(width: 18, alignment: .trailing)
+
             Image(systemName: "flame.fill")
                 .font(.system(size: 10))
-                .foregroundStyle(f.streak > 0 ? Color.brandAccent : text.opacity(0.3))
+                .foregroundStyle(f.streak > 0 ? Color.brandAccent
+                                              : text.opacity(0.3))
+                .padding(.leading, 3)
         }
     }
 
@@ -174,36 +242,40 @@ struct StreaksWidgetEntryView: View {
                 Spacer(minLength: 8)
 
                 if let g = entry.group {
-                    HStack(spacing: 5) {
-                        Text((g.name ?? "GROUP").uppercased())
-                            .font(.system(size: 9, weight: .heavy))
-                            .foregroundStyle(text.opacity(0.55))
-                            .tracking(0.6)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 5) {
+                            Text((g.name ?? "GROUP"))
+                                .font(.system(size: 10.5, weight: .semibold))
+                                .foregroundStyle(text.opacity(0.85))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
 
-                        if g.limit > 0 {
-                            Text(formatLimit(g.limit))
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundStyle(text.opacity(0.4))
+                            Spacer(minLength: 4)
+
+                            if g.limit > 0 {
+                                Text(formatLimit(g.limit))
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(text.opacity(0.38))
+                                    .padding(.trailing, 5)
+                                Text("\(g.streak)")
+                                    .font(.system(size: 13, weight: .heavy))
+                                    .foregroundStyle(Color.brandPrimary)
+                                Image(systemName: "flame.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(g.streak > 0 ? Color.brandAccent
+                                                                  : text.opacity(0.3))
+                            } else {
+                                Image(systemName: "nosign")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(text.opacity(0.35))
+                            }
                         }
 
-                        Spacer(minLength: 4)
-
-                        if g.limit > 0 {
-                            Text("\(g.streak)")
-                                .font(.system(size: 15, weight: .heavy))
-                                .foregroundStyle(Color.brandPrimary)
-                            Image(systemName: "flame.fill")
-                                .font(.system(size: 11))
-                                .foregroundStyle(g.streak > 0 ? Color.brandAccent
-                                                              : text.opacity(0.3))
-                        } else {
-                            Image(systemName: "nosign")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(text.opacity(0.35))
-                        }
                     }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(text.opacity(0.07))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
         }

@@ -453,4 +453,11 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) async {}
+
+  @override
+  Future<void> setNames({
+    String? firstName,
+    String? lastName,
+    String? nickname,
+  }) async {}
 }

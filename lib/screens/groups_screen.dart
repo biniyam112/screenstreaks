@@ -15,6 +15,7 @@ import '../widgets.dart';
 import 'friend_detail_screen.dart';
 import '../widgets/aurora_header.dart';
 import '../widgets/avatar.dart';
+import '../services/avatar_cache.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -83,6 +84,20 @@ class _GroupsScreenState extends State<GroupsScreen>
       final groups = await repo.groups();
       final invites = await repo.pendingInvites();
       final people = {me.id: me, for (final f in friends) f.id: f};
+      // Group membership and friendship are separate — fetch anyone in a
+      // group we don't already have, or they vanish from the roster.
+      final missing = <String>{
+        for (final g in groups)
+          for (final id in g.memberIds)
+            if (!people.containsKey(id)) id,
+      };
+      for (final id in missing) {
+        try {
+          people[id] = await repo.friend(id);
+        } catch (_) {
+          // Skip anyone we can't read — RLS may not allow it.
+        }
+      }
       final limits = {for (final g in groups) g.id: g.limitMinutes};
       final pinned = await Prefs.widgetGroupId() ??
           (groups.isNotEmpty ? groups.first.id : null);
@@ -120,16 +135,19 @@ class _GroupsScreenState extends State<GroupsScreen>
     try {
       final members = membersOf(g);
       final limit = _limits[id];
+      // Photos have to live on disk for the widget to draw them.
+      final photos = await AvatarCache.cache(members.take(6).toList());
       await HomeWidget.setAppGroupId('group.com.screenstreaks.screenstreaks');
       await HomeWidget.saveWidgetData<String>(
         'leaderboard',
         jsonEncode(members
             .take(6)
             .map((p) => {
-                  'name': p.displayName,
+                  'name': p.shortLabel,
                   'streak': p.currentStreak,
                   'isMe': p.isMe,
                   'limit': p.dailyLimitMinutes,
+                  'photo': photos[p.id],
                 })
             .toList()),
       );
@@ -139,6 +157,7 @@ class _GroupsScreenState extends State<GroupsScreen>
           'name': g.name,
           'streak': limit == null ? 0 : groupStreak(members, limit),
           'limit': limit ?? 0,
+          'members': members.length,
         }),
       );
       await HomeWidget.updateWidget(iOSName: 'StreaksWidget');
