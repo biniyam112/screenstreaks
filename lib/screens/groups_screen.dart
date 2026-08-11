@@ -14,6 +14,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'friend_detail_screen.dart';
 import '../widgets/aurora_header.dart';
+import '../widgets/avatar.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -557,24 +558,7 @@ class GroupCard extends StatelessWidget {
                 for (final m in members.take(6))
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: (m.avatarColor ?? AppColors.primary)
-                            .withValues(alpha: 0.18),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        m.initials,
-                        style: appFont(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: m.avatarColor ?? AppColors.primary,
-                        ),
-                      ),
-                    ),
+                    child: Avatar(profile: m, size: 28),
                   ),
                 const Spacer(),
                 Text(
@@ -1033,7 +1017,6 @@ class _MemberRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMe = person.isMe;
-    final color = person.avatarColor ?? AppColors.primary;
 
     return GestureDetector(
       onTap: isMe
@@ -1065,23 +1048,7 @@ class _MemberRow extends StatelessWidget {
                 ),
               ),
             ),
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                person.initials,
-                style: appFont(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
-              ),
-            ),
+            Avatar(profile: person, size: 40),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

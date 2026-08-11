@@ -7,6 +7,7 @@ import '../theme.dart';
 import 'connect_screen.dart';
 import 'friend_detail_screen.dart';
 import 'groups_screen.dart';
+import '../widgets/avatar.dart';
 
 /// Friends as a row of faces, groups as cards beneath. One tab for everyone
 /// you're accountable to.
@@ -85,7 +86,6 @@ class _FriendChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = friend.avatarColor ?? AppColors.primary;
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -97,23 +97,7 @@ class _FriendChip extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.22),
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                friend.initials,
-                style: appFont(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                ),
-              ),
-            ),
+            Avatar(profile: friend, size: 46),
             const SizedBox(height: 5),
             Text(
               '${friend.currentStreak} 🔥',

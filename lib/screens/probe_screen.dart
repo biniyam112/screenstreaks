@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/prefs.dart';
 import '../theme.dart';
+import '../services/screen_time.dart';
 
 /// Temporary diagnostic: does iOS fire eventDidReachThreshold honestly on
 /// this OS version, or immediately? Delete once that question is settled.
@@ -18,6 +20,8 @@ class _ProbeScreenState extends State<ProbeScreen> {
 
   String _status = 'Not started';
   List<String> _log = const [];
+  DateTime? _since;
+  Timer? _tick;
 
   Future<void> _call(String method, [dynamic args]) async {
     setState(() => _status = 'Calling $method…');
@@ -36,6 +40,27 @@ class _ProbeScreenState extends State<ProbeScreen> {
 
   /// Ask iOS what's actually registered, rather than showing whatever the
   /// last button press reported.
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSince() async {
+    final d = await ScreenTime.monitoringSince();
+    if (mounted) setState(() => _since = d);
+  }
+
+  String get _elapsed {
+    final start = _since;
+    if (start == null) return '—';
+    final d = DateTime.now().difference(start);
+    final h = d.inHours.toString();
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final sec = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return h + 'h ' + m + 'm ' + sec + 's';
+  }
+
   Future<void> _refreshStatus() async {
     try {
       final active = await _channel.invokeMethod('activeLimit') as int? ?? 0;
@@ -89,6 +114,7 @@ class _ProbeScreenState extends State<ProbeScreen> {
             _btn('3 · Start monitoring (my limit)', _startWithMyLimit),
             _btn('TEST · Start at 2 min', () => _call('startProbe', 2)),
             _btn('Refresh log', () async {
+              await _loadSince();
               await _refreshStatus();
               await _refreshLog();
             }),
@@ -98,6 +124,39 @@ class _ProbeScreenState extends State<ProbeScreen> {
             }),
             _btn('Stop monitoring', () => _call('stop')),
             const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: context.cSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.cDivider),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'MONITORING FOR',
+                    style: appFont(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: context.cTextTer,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _elapsed,
+                    style: appMono(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(14),

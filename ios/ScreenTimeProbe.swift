@@ -117,6 +117,11 @@ enum ScreenTimeProbe {
                 let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
                 result(data != nil)
 
+            case "monitoringSince":
+                let d = UserDefaults(suiteName: suite)?
+                    .object(forKey: "monitoring_started") as? Date
+                result(d?.timeIntervalSince1970 ?? 0)
+
             case "activeLimit":
                 result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
 

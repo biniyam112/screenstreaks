@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../services/prefs.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import '../widgets/avatar.dart';
 
 String _fmtLimit(int minutes) {
   final h = minutes ~/ 60;
@@ -413,7 +414,6 @@ class _LeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMe = person.isMe;
-    final avatarColor = person.avatarColor ?? AppColors.primary;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -442,23 +442,7 @@ class _LeaderRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: avatarColor.withValues(alpha: 0.18),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              person.initials,
-              style: appFont(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: avatarColor,
-              ),
-            ),
-          ),
+          Avatar(profile: person, size: 42),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

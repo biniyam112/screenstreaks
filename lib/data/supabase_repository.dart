@@ -568,14 +568,14 @@ class SupabaseRepository implements Repository {
 
     // Folder must be the user id — the storage policy checks it.
     final path = '\$userId/avatar.\$ext';
-    await _supabase.storage.from('avatars').uploadBinary(
+    await _supabase.storage.from('Avatars').uploadBinary(
           path,
           Uint8List.fromList(bytes),
           fileOptions: const FileOptions(upsert: true),
         );
 
     // Cache-bust so a replaced picture actually shows.
-    final base = _supabase.storage.from('avatars').getPublicUrl(path);
+    final base = _supabase.storage.from('Avatars').getPublicUrl(path);
     final url = base + '?v=' + DateTime.now().millisecondsSinceEpoch.toString();
     await _supabase.from('profiles').update({'avatar_url': url}).eq('id', userId);
   }

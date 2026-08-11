@@ -19,6 +19,7 @@ import 'friend_detail_screen.dart';
 import '../services/screen_time.dart';
 import 'history_screen.dart';
 import '../widgets/aurora_header.dart';
+import '../widgets/avatar.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -614,7 +615,6 @@ class FriendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = friend.avatarColor ?? AppColors.primary;
     final todayStatus = friend.statusOn(DateTime.now());
     final streak = friend.currentStreak;
 
@@ -634,19 +634,7 @@ class FriendRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  friend.initials,
-                  style: appFont(fontWeight: FontWeight.w700, color: color),
-                ),
-              ),
+              Avatar(profile: friend, size: 42),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

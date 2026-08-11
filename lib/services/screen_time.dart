@@ -151,4 +151,17 @@ class ScreenTime {
     if (last == null) return false;
     return DateTime.now().difference(last).inDays >= days;
   }
+
+  /// When the current monitoring interval was registered.
+  static Future<DateTime?> monitoringSince() async {
+    if (!supported) return null;
+    try {
+      final secs = await _channel.invokeMethod('monitoringSince');
+      final v = (secs as num?)?.toDouble() ?? 0;
+      if (v <= 0) return null;
+      return DateTime.fromMillisecondsSinceEpoch((v * 1000).round());
+    } on PlatformException {
+      return null;
+    }
+  }
 }
