@@ -87,6 +87,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                     DeviceActivityEvent.Name("streaks.probe.warning"): warnEvent,
                 ]
             )
+            // The bridge stamps this when monitoring starts; the re-arm has
+            // to as well or the uptime timer goes blank after midnight.
+            defaults.set(Date(), forKey: "monitoring_started")
             log("re-armed at \(minutes)m")
         } catch {
             log("re-arm failed: \(error.localizedDescription)")

@@ -708,7 +708,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   activeColor: AppColors.primary,
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    f.displayName,
+                    f.listName,
                     style: appFont(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -959,7 +959,7 @@ class _Banner extends StatelessWidget {
     final status = over.isEmpty
         ? 'Everyone under today'
         : over.length == 1
-            ? '${over.first.displayName} is over today'
+            ? '${over.first.listName} is over today'
             : '${over.length} people over today';
 
     return Container(
@@ -1074,7 +1074,7 @@ class _MemberRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    person.displayName,
+                    person.listName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: appFont(

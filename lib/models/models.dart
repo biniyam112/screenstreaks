@@ -218,6 +218,15 @@ class Profile {
   /// back to initials built from the name.
   final String? nickname;
 
+  /// First name for lists and leaderboards — full names read as a register.
+  /// Falls back to the first word of the display name for older accounts.
+  String get listName {
+    final f = (firstName ?? '').trim();
+    if (f.isNotEmpty) return f;
+    final parts = displayName.trim().split(RegExp(r'\s+'));
+    return parts.isEmpty ? displayName : parts.first;
+  }
+
   /// What the widget shows: the nickname if set, else initials.
   String get shortLabel {
     final n = nickname?.trim();

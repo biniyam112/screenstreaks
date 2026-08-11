@@ -20,6 +20,7 @@ import '../services/screen_time.dart';
 import 'history_screen.dart';
 import '../widgets/aurora_header.dart';
 import '../widgets/avatar.dart';
+import '../widgets/name_prompt.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -41,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   int _passesLeft = 1;
   Duration? _offSince;
   bool _stale = false;
+  DateTime? _countingSince;
 
   @override
   void initState() {
@@ -96,6 +98,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // A monitor that's registered but hasn't woken in days isn't watching
       // anything — the interval callbacks alone should fire daily.
       final stale = await ScreenTime.looksStale();
+      // Counting restarts whenever the monitor is re-registered, so a start
+      // time later than midnight means today is only partly measured.
+      final countingSince = await ScreenTime.monitoringSince();
       // Keep the session log honest: open one when tracking is live, close it
       // when we find it stopped without being told.
       final sessions = await repo.monitoringSessions();
@@ -130,6 +135,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         _passesLeft = (1 - usedThisWeek).clamp(0, 1);
         _offSince = offSince;
         _stale = stale;
+        _countingSince = countingSince;
         _me = me.dailyLimitMinutes == savedGoal
             ? me
             : me.copyWith(dailyLimitMinutes: savedGoal);
@@ -138,6 +144,13 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       });
       // Keep the home-screen widget in sync with the latest week/streak.
       HomeWidgetService.update(me);
+
+      // Accounts made before these fields existed have no first name — ask
+      // once so lists and the widget have something to show.
+      if (mounted && (me.firstName ?? '').trim().isEmpty) {
+        await showNamePrompt(context, me);
+        if (mounted) _load();
+      }
     } catch (_) {
       // Only reachable on a first-ever launch with no connection and no cache;
       // otherwise the offline layer serves cached data. Show a retry instead
@@ -383,6 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     passesLeft: _passesLeft,
                     monitoring: ScreenTime.supported ? _monitoring : null,
                     stale: _stale,
+                    countingSince: _countingSince,
                     onRefreshMonitoring: _refreshMonitoring,
                     offSince: _offSince,
                     onFixMonitoring: () async {
@@ -624,7 +638,7 @@ class FriendRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      friend.displayName,
+                      friend.listName,
                       style: appFont(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,

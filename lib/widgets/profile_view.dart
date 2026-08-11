@@ -30,6 +30,7 @@ class ProfileView extends StatelessWidget {
     this.monitoring,
     this.onFixMonitoring,
     this.stale = false,
+    this.countingSince,
     this.onRefreshMonitoring,
     this.onToggleMonitoring,
     this.offSince,
@@ -62,6 +63,10 @@ class ProfileView extends StatelessWidget {
 
   /// Monitoring is registered but hasn't reported in days.
   final bool stale;
+
+  /// When the current threshold count began. Later than midnight means
+  /// today is only partly measured.
+  final DateTime? countingSince;
 
   /// Re-registering a stale monitor.
   final VoidCallback? onRefreshMonitoring;
@@ -124,6 +129,7 @@ class ProfileView extends StatelessWidget {
             onTap: onFixMonitoring,
             onToggle: onToggleMonitoring,
             offSince: offSince,
+            countingSince: countingSince,
           ),
           const SizedBox(height: 10),
         ],
@@ -179,12 +185,30 @@ class _MonitorDot extends StatelessWidget {
     this.onTap,
     this.onToggle,
     this.offSince,
+    this.countingSince,
   });
 
   final bool live;
   final VoidCallback? onTap;
   final ValueChanged<bool>? onToggle;
   final Duration? offSince;
+  final DateTime? countingSince;
+
+  /// Counting that began today can't cover the whole day.
+  bool get partialToday {
+    final s = countingSince;
+    if (s == null || !live) return false;
+    final now = DateTime.now();
+    return s.isAfter(DateTime(now.year, now.month, now.day));
+  }
+
+  String get _countingFor {
+    final s = countingSince;
+    if (s == null) return '';
+    final d = DateTime.now().difference(s);
+    if (d.inMinutes < 60) return 'counting ${d.inMinutes}m';
+    return 'counting ${d.inHours}h';
+  }
 
   /// Total time tracking has been off — shown whether it's live now or not.
   String get _offFor {
@@ -197,7 +221,9 @@ class _MonitorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = live ? AppColors.primary : AppColors.danger;
+    final color = !live
+        ? AppColors.danger
+        : (partialToday ? AppColors.warning : AppColors.primary);
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
       decoration: BoxDecoration(
@@ -217,7 +243,9 @@ class _MonitorDot extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: live ? null : onTap,
               child: Text(
-                live ? 'Tracking' : 'Not tracking — tap to fix',
+                !live
+                    ? 'Not tracking — tap to fix'
+                    : (partialToday ? _countingFor : 'Tracking'),
                 style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,

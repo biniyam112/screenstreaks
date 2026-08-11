@@ -305,7 +305,7 @@ class _GroupCard extends StatelessWidget {
     } else if (over.isEmpty) {
       status = 'Everyone under today';
     } else if (over.length == 1) {
-      status = '${over.first.displayName} is over today';
+      status = '${over.first.listName} is over today';
     } else {
       status = '${over.length} people over today';
     }
@@ -449,7 +449,7 @@ class _LeaderRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  person.displayName,
+                  person.listName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: appFont(
