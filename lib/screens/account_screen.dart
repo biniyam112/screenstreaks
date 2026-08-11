@@ -10,6 +10,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'friends_screen.dart';
 import 'settings_screen.dart';
+import '../widgets/avatar.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// The "Profile" tab: the user's own identity — avatar, editable display name,
 /// share code — plus entry points to settings and sign-out.
@@ -32,6 +34,28 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _load() async {
     final me = await RepoScope.of(context).me();
     if (mounted) setState(() => _me = me);
+  }
+
+  Future<void> _pickAvatar() async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 80,
+    );
+    if (file == null || !mounted) return;
+    try {
+      final bytes = await file.readAsBytes();
+      if (!mounted) return;
+      await RepoScope.of(context).setAvatar(bytes);
+      notifyProfileChanged();
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   Future<void> _editName() async {
@@ -103,7 +127,7 @@ class _AccountScreenState extends State<AccountScreen> {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
                 children: [
-                  _Header(profile: me, onEdit: _editName),
+                  _Header(profile: me, onEdit: _editName, onPickPhoto: _pickAvatar),
                   const SizedBox(height: 24),
                   _ShareCodeCard(code: me.shareCode),
                   const SizedBox(height: 24),
@@ -159,30 +183,42 @@ class _AccountScreenState extends State<AccountScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.profile, required this.onEdit});
+  const _Header({
+    required this.profile,
+    required this.onEdit,
+    required this.onPickPhoto,
+  });
   final Profile profile;
   final VoidCallback onEdit;
+  final VoidCallback onPickPhoto;
 
   @override
   Widget build(BuildContext context) {
-    final color = profile.avatarColor ?? AppColors.primary;
     return Column(
       children: [
-        Container(
-          width: 88,
-          height: 88,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.16),
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            profile.initials,
-            style: appFont(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
+        GestureDetector(
+          onTap: onPickPhoto,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Avatar(profile: profile, size: 88),
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                        AppColors.primary.withValues(alpha: 0.9),
+                        context.cSurface),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.cBg, width: 2),
+                  ),
+                  child: const Icon(IconsaxPlusBold.camera,
+                      size: 14, color: Colors.white),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),

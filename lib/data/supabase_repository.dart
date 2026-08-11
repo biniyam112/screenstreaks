@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -238,6 +239,7 @@ class SupabaseRepository implements Repository {
       displayName: json['display_name'] as String? ?? 'Friend',
       shareCode: json['share_code'] as String? ?? '',
       dailyLimitMinutes: json['daily_limit_minutes'] as int? ?? 120,
+      avatarUrl: json['avatar_url'] as String?,
       records: records
           .map(
             (r) => DailyRecord(
@@ -557,5 +559,24 @@ class SupabaseRepository implements Repository {
           .eq('user_id', userId)
           .isFilter('ended_at', null);
     } catch (_) {}
+  }
+
+  @override
+  Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('Not signed in');
+
+    // Folder must be the user id — the storage policy checks it.
+    final path = '\$userId/avatar.\$ext';
+    await _supabase.storage.from('avatars').uploadBinary(
+          path,
+          Uint8List.fromList(bytes),
+          fileOptions: const FileOptions(upsert: true),
+        );
+
+    // Cache-bust so a replaced picture actually shows.
+    final base = _supabase.storage.from('avatars').getPublicUrl(path);
+    final url = base + '?v=' + DateTime.now().millisecondsSinceEpoch.toString();
+    await _supabase.from('profiles').update({'avatar_url': url}).eq('id', userId);
   }
 }

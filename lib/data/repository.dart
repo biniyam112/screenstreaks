@@ -107,6 +107,10 @@ abstract class Repository {
   /// Update the daily limit goal.
   Future<void> setDailyLimit(int minutes);
 
+  /// Upload a profile picture and store its URL. [bytes] is the raw image.
+  Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) =>
+      throw UnimplementedError('Avatars not supported by this backend');
+
   /// Update the current user's display name.
   Future<void> setDisplayName(String name);
 

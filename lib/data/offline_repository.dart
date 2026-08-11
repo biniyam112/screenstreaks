@@ -263,4 +263,8 @@ class OfflineRepository implements Repository {
   @override
   Future<void> logMonitoringOff(String reason) =>
       _inner.logMonitoringOff(reason);
+
+  @override
+  Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) =>
+      _inner.setAvatar(bytes, ext: ext);
 }

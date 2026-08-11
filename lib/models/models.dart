@@ -192,6 +192,7 @@ class Profile {
     required this.dailyLimitMinutes,
     required this.records,
     this.avatarColor,
+    this.avatarUrl,
     this.isMe = false,
   });
 
@@ -203,6 +204,9 @@ class Profile {
   /// History, most-recent last. Keyed access via [byDay].
   final List<DailyRecord> records;
   final Color? avatarColor;
+
+  /// Uploaded profile picture, or null when we fall back to initials.
+  final String? avatarUrl;
   final bool isMe;
 
   String get initials {
@@ -220,6 +224,7 @@ class Profile {
         dailyLimitMinutes: dailyLimitMinutes ?? this.dailyLimitMinutes,
         records: records ?? this.records,
         avatarColor: avatarColor,
+        avatarUrl: avatarUrl,
         isMe: isMe,
       );
 
@@ -229,6 +234,7 @@ class Profile {
     'shareCode': shareCode,
     'dailyLimitMinutes': dailyLimitMinutes,
     'avatarColor': avatarColor?.toARGB32(),
+    'avatarUrl': avatarUrl,
     'isMe': isMe,
     'records': records.map((r) => r.toJson()).toList(),
   };
@@ -239,6 +245,7 @@ class Profile {
     shareCode: j['shareCode'] as String,
     dailyLimitMinutes: j['dailyLimitMinutes'] as int,
     avatarColor: j['avatarColor'] != null ? Color(j['avatarColor'] as int) : null,
+    avatarUrl: j['avatarUrl'] as String?,
     isMe: j['isMe'] as bool? ?? false,
     records: (j['records'] as List)
         .map((e) => DailyRecord.fromJson(e as Map<String, dynamic>))

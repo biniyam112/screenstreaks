@@ -34,6 +34,20 @@ class _ProbeScreenState extends State<ProbeScreen> {
     await _call('startProbe', minutes);
   }
 
+  /// Ask iOS what's actually registered, rather than showing whatever the
+  /// last button press reported.
+  Future<void> _refreshStatus() async {
+    try {
+      final active = await _channel.invokeMethod('activeLimit') as int? ?? 0;
+      if (!mounted) return;
+      setState(() => _status = active > 0
+          ? 'monitoring — threshold ${active}m'
+          : 'Not started');
+    } on PlatformException {
+      // Keep the last message.
+    }
+  }
+
   Future<void> _refreshLog() async {
     try {
       final entries = await _channel.invokeMethod('readLog');
@@ -74,7 +88,10 @@ class _ProbeScreenState extends State<ProbeScreen> {
             _btn('2 · Pick apps to count', () => _call('pickApps')),
             _btn('3 · Start monitoring (my limit)', _startWithMyLimit),
             _btn('TEST · Start at 2 min', () => _call('startProbe', 2)),
-            _btn('Refresh log', _refreshLog),
+            _btn('Refresh log', () async {
+              await _refreshStatus();
+              await _refreshLog();
+            }),
             _btn('Clear log', () async {
               await _call('clearLog');
               await _refreshLog();

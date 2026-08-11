@@ -450,4 +450,7 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> logMonitoringOff(String reason) async {}
+
+  @override
+  Future<void> setAvatar(List<int> bytes, {String ext = 'jpg'}) async {}
 }
