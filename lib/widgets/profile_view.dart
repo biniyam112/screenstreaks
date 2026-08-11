@@ -229,9 +229,9 @@ class _MonitorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = !live
-        ? AppColors.danger
-        : (partialToday ? AppColors.warning : AppColors.primary);
+    // Green whenever it's counting, red when it isn't. The "counting Xh"
+    // text still says the day is only partly covered.
+    final color = live ? AppColors.primary : AppColors.danger;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
       decoration: BoxDecoration(
@@ -252,7 +252,7 @@ class _MonitorDot extends StatelessWidget {
               onTap: live ? null : onTap,
               child: Text(
                 !live
-                    ? 'Not tracking — tap to fix'
+                    ? 'Not tracking'
                     : (partialToday ? _countingFor : 'Tracking'),
                 style: appFont(
                   fontSize: 12.5,

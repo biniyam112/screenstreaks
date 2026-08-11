@@ -147,6 +147,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       source: 'manual',
       partial: true,
     );
+    // My Streak keeps its own copy of the tracking state, so tell it to
+    // reload or the pill still reads as live.
+    notifyProfileChanged();
     await _refreshScreenTime();
   }
 
@@ -287,47 +290,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onChanged: (_) => ThemeScope.of(context).toggleTheme(),
                   ),
                 ),
-                if (ScreenTime.supported && _stLimit > 0) ...[
-                  const SizedBox(height: 34),
-                  AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Stop tracking',
-                          style: appFont(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: context.cText,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          "Today won't count either way, and your group sees "
-                          'the gap. You can turn it back on any time.',
-                          style: appFont(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                            color: context.cTextSec,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: _stopTracking,
-                          child: Text(
-                            'Stop tracking',
-                            style: appFont(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.danger,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 if (ScreenTime.supported) ...[
                   const SizedBox(height: 24),
                   _SectionLabel('Screen Time'),
@@ -354,9 +316,27 @@ class _SettingsScreenState extends State<SettingsScreen>
                           onPressed: _pickApps,
                         ),
                         const SizedBox(height: 10),
-                        ModernButton(
-                          label: _stLimit > 0 ? 'Restart tracking' : 'Start tracking',
-                          onPressed: _stHasApps ? _startTracking : null,
+                        _SwitchRow(
+                          icon: IconsaxPlusBold.mobile,
+                          iconColor: AppColors.primary,
+                          title: 'Track my screen time',
+                          subtitle: _stLimit > 0
+                              ? 'Watching ${_stLimit ~/ 60}h ${_stLimit % 60}m'
+                              : 'Off — days it misses won\'t count',
+                          value: _stLimit > 0,
+                          onChanged: (on) {
+                            // No apps chosen yet — send them to the picker
+                            // rather than starting a monitor watching nothing.
+                            if (!_stHasApps) {
+                              _pickApps();
+                              return;
+                            }
+                            if (on) {
+                              _startTracking();
+                            } else {
+                              _stopTracking();
+                            }
+                          },
                         ),
                         const SizedBox(height: 10),
                         // TEMPORARY: 2-minute threshold for testing. Remove.

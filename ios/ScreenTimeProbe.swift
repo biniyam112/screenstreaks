@@ -185,6 +185,11 @@ enum ScreenTimeProbe {
 
             case "stop":
                 DeviceActivityCenter().stopMonitoring([activity])
+                // Clear the stored limit too — the switch and the pill both
+                // read it, so leaving it set makes the UI claim it's still on.
+                let defaults = UserDefaults(suiteName: suite)
+                defaults?.removeObject(forKey: "active_limit")
+                defaults?.removeObject(forKey: "monitoring_started")
                 result("stopped")
 
             default:

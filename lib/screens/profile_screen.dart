@@ -110,25 +110,20 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       } else if (!monitoring && open.isNotEmpty) {
         await repo.logMonitoringOff('detected');
       }
-      // Total time tracking was off in the last 24 hours, whether or not
-      // it's running now.
+      // Downtime in the last 24 hours, measured as the window minus the
+      // time sessions actually covered. Counting coverage rather than gaps
+      // means an open session, or downtime before the first session, can't
+      // be missed.
       final now = DateTime.now();
       final since = now.subtract(const Duration(hours: 24));
-      var down = Duration.zero;
-      DateTime? cursor;
-      for (final x in sessions.reversed) {
-        // Gap between the end of one session and the start of the next.
-        if (cursor != null && x.startedAt.isAfter(cursor)) {
-          final from = cursor.isAfter(since) ? cursor : since;
-          if (x.startedAt.isAfter(from)) down += x.startedAt.difference(from);
-        }
-        cursor = x.endedAt ?? now;
+      var covered = Duration.zero;
+      for (final x in sessions) {
+        final start = x.startedAt.isAfter(since) ? x.startedAt : since;
+        final end = x.endedAt ?? now;
+        if (end.isAfter(start)) covered += end.difference(start);
       }
-      if (cursor != null && cursor.isBefore(now)) {
-        final from = cursor.isAfter(since) ? cursor : since;
-        down += now.difference(from);
-      }
-      final offSince = down;
+      final window = now.difference(since);
+      final offSince = covered >= window ? Duration.zero : window - covered;
       if (!mounted) return;
       setState(() {
         _monitoring = monitoring;
@@ -164,6 +159,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   /// limit changed or monitoring was never started. Returns whether it's on.
   Future<bool> _ensureMonitoring(int goalMinutes) async {
     if (!ScreenTime.supported) return false;
+    // Respect a deliberate stop — otherwise this restarts monitoring the
+    // moment the user switches it off.
+    if (!await Prefs.trackingEnabled()) return false;
     try {
       // An install wipes the app-group container, so a missing selection
       // doesn't mean the user opted out — Prefs remembers that they didn't.
