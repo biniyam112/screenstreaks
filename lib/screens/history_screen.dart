@@ -26,9 +26,31 @@ class _HistoryScreenState extends State<HistoryScreen> {
   late Profile profile = widget.profile;
 
   Future<void> _onTapDay(DateTime day, DailyRecord? record) async {
-    if (record == null || record.limitMet) return;
+    final canSpend = record != null && !record.limitMet && !record.partial;
 
-    final ok = await showModalBottomSheet<bool>(
+    final (title, body) = switch (record) {
+      null => (
+          'Nothing recorded',
+          "Tracking wasn't running, or this day is before you joined.",
+        ),
+      final r when r.partial => (
+          'Not judged',
+          "Tracking didn't cover the whole day, so we can't say either way. "
+              'It counts neither for nor against your streak. If it should '
+              'have been a good day, you can spend a pass on it.',
+        ),
+      final r when r.limitMet => (
+          'Under your limit',
+          'You stayed under and the day counts toward your streak.',
+        ),
+      _ => (
+          'Over your limit',
+          'You passed your limit, so the streak broke here. Spend a pass to '
+              'recover it — one a week.',
+        ),
+    };
+
+    final spend = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: context.cSurface,
       shape: const RoundedRectangleBorder(
@@ -38,20 +60,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
         padding: const EdgeInsets.fromLTRB(24, 22, 24, 30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Recover this day?',
+              title,
               style: appFont(
-                fontSize: 20,
+                fontSize: 19,
                 fontWeight: FontWeight.w800,
                 color: context.cText,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Spend a pass and this day counts as met. One a week — '
-              'use it when the app got it wrong, or life did.',
-              textAlign: TextAlign.center,
+              body,
               style: appFont(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -59,17 +80,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 height: 1.45,
               ),
             ),
-            const SizedBox(height: 22),
-            ModernButton(
-              label: 'Spend a pass',
-              onPressed: () => Navigator.pop(sheetContext, true),
-            ),
+            if (canSpend || (record?.partial ?? false)) ...[
+              const SizedBox(height: 20),
+              ModernButton(
+                label: 'Spend a pass',
+                onPressed: () => Navigator.pop(sheetContext, true),
+              ),
+            ],
           ],
         ),
       ),
     );
 
-    if (ok != true || !mounted) return;
+    if (spend != true || !mounted) return;
     final repo = RepoScope.of(context);
     try {
       await repo.spendPass(day);
@@ -83,6 +106,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
+  /// Every month from the first record to now, newest first.
   List<DateTime> get _months {
     final today = dateOnly(DateTime.now());
     final days = profile.records.map((r) => dateOnly(r.day)).toList()..sort();

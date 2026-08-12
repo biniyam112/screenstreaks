@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
@@ -35,6 +36,9 @@ class AuthScope extends InheritedWidget {
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
+  /// So the auth listener can clear pushed routes when the session ends.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   State<MainApp> createState() => _MainAppState();
 }
@@ -46,6 +50,25 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _checkSignIn();
+    // Watch the session rather than polling it — signing out anywhere in the
+    // app swaps straight back to the sign-in screen.
+    _auth = RepoScope.of(context).authChanges().listen((signedIn) {
+      if (!mounted) return;
+      setState(() => _signedIn = signedIn);
+      // home swaps to the sign-in screen, but Account and Settings are still
+      // stacked on top of it — clear them or nothing looks like it happened.
+      if (!signedIn) {
+        MainApp.navigatorKey.currentState?.popUntil((r) => r.isFirst);
+      }
+    });
+  }
+
+  StreamSubscription<bool>? _auth;
+
+  @override
+  void dispose() {
+    _auth?.cancel();
+    super.dispose();
   }
 
   void _checkSignIn() {
@@ -57,6 +80,7 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Undr',
+      navigatorKey: MainApp.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeScope.of(context).currentTheme,
       // AuthScope is injected here — *above* the Navigator — so it's an
@@ -71,6 +95,10 @@ class _MainAppState extends State<MainApp> {
             // Clear the device onboarding flag so the next account (which may
             // be a different person on this device) sets up fresh.
             await Prefs.setOnboarded(false);
+            // Give Supabase a moment to clear the session before we ask,
+            // or isSignedIn still reports true and the tree doesn't swap.
+            await Future<void>.delayed(const Duration(milliseconds: 150));
+            if (!mounted) return;
             _checkSignIn();
           },
           child: child!,

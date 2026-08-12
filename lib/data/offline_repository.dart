@@ -272,4 +272,7 @@ class OfflineRepository implements Repository {
   Future<void> setNames({String? firstName, String? lastName, String? nickname}) =>
       _inner.setNames(
           firstName: firstName, lastName: lastName, nickname: nickname);
+
+  @override
+  Stream<bool> authChanges() => _inner.authChanges();
 }

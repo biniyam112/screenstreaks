@@ -604,4 +604,8 @@ class SupabaseRepository implements Repository {
     if (patch.isEmpty) return;
     await _supabase.from('profiles').update(patch).eq('id', userId);
   }
+
+  @override
+  Stream<bool> authChanges() => _supabase.auth.onAuthStateChange
+      .map((event) => event.session != null);
 }

@@ -224,7 +224,7 @@ class _MonitorDot extends StatelessWidget {
     return 'counting ${d.inHours}h';
   }
 
-  /// Total time tracking has been off — shown whether it's live now or not.
+  /// Time today that nothing was counted.
   String get _offFor {
     final d = offSince;
     if (d == null) return '0m';
@@ -270,7 +270,7 @@ class _MonitorDot extends StatelessWidget {
           ),
           if (offSince != null)
             Text(
-              live ? 'was off $_offFor' : _offFor,
+              '$_offFor missed today',
               style: appFont(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,

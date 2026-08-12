@@ -110,6 +110,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (mounted) setState(() => _tracking = started);
   }
 
+  bool get _hasName =>
+      _firstController.text.trim().isNotEmpty &&
+      _lastController.text.trim().isNotEmpty;
+
   Future<void> _finish() async {
     final first = _firstController.text.trim();
     final last = _lastController.text.trim();
@@ -193,6 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     first: _firstController,
                     last: _lastController,
                     nickname: _nicknameController,
+                    onChanged: () => setState(() {}),
                   ),
                   if (ScreenTime.supported)
                     _TrackingPage(
@@ -208,7 +213,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ? ModernButton(
                       label: 'Continue',
                       icon: IconsaxPlusBold.arrow_right_3,
-                      onPressed: _next,
+                      // The name page needs both names before moving on —
+                      // lists and the widget both depend on them.
+                      onPressed: _page == 1 && !_hasName ? null : _next,
                     )
                   : ModernButton(
                       label: _saving ? 'Setting up…' : 'Get started',
@@ -362,7 +369,10 @@ class _NamePage extends StatelessWidget {
     required this.first,
     required this.last,
     required this.nickname,
+    required this.onChanged,
   });
+
+  final VoidCallback onChanged;
 
   final TextEditingController first;
   final TextEditingController last;
@@ -404,9 +414,9 @@ class _NamePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 28),
-        _NameField(controller: first, hint: 'First name'),
+        _NameField(controller: first, hint: 'First name', onChanged: onChanged),
         const SizedBox(height: 12),
-        _NameField(controller: last, hint: 'Last name'),
+        _NameField(controller: last, hint: 'Last name', onChanged: onChanged),
         const SizedBox(height: 24),
         Text(
           'Widget nickname',
@@ -441,7 +451,10 @@ class _NameField extends StatelessWidget {
     required this.controller,
     required this.hint,
     this.maxLength,
+    this.onChanged,
   });
+
+  final VoidCallback? onChanged;
 
   final TextEditingController controller;
   final String hint;
@@ -451,6 +464,7 @@ class _NameField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      onChanged: onChanged == null ? null : (_) => onChanged!(),
       textAlign: TextAlign.center,
       textCapitalization: TextCapitalization.words,
       maxLength: maxLength,

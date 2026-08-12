@@ -12,6 +12,7 @@ import '../theme.dart';
 import '../theme_provider.dart';
 import '../widgets.dart';
 import '../services/screen_time.dart';
+import '../models/models.dart';
 
 /// Daily goal, alerts, appearance, usage-access (Android), and sign-out.
 class SettingsScreen extends StatefulWidget {
@@ -120,8 +121,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         title: Text('Stop tracking?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
-          "Today won't count toward your streak, and time while it's off is "
-          'visible to your group.',
+          "Days we can't watch don't count toward your streak — it won't "
+          "advance, and your group sees the gap. If you're already over "
+          'today, that stays.',
           style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
         ),
         actions: [
@@ -146,13 +148,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     await ScreenTime.stopMonitoring();
     await Prefs.setTrackingEnabled(false);
     await repo.logMonitoringOff('manual');
-    await repo.checkIn(
-      day: DateTime.now(),
-      limitMet: false,
-      limitMinutes: _savedGoal,
-      source: 'manual',
-      partial: true,
-    );
+    // Only mark the day unjudged if it hadn't already been decided —
+    // stopping after going over shouldn't erase the miss.
+    final me = await repo.me();
+    final today = dateOnly(DateTime.now());
+    final existing = me.byDay[today];
+    if (existing == null || existing.limitMet) {
+      await repo.checkIn(
+        day: DateTime.now(),
+        limitMet: false,
+        limitMinutes: _savedGoal,
+        source: 'manual',
+        partial: true,
+      );
+    }
     // My Streak keeps its own copy of the tracking state, so tell it to
     // reload or the pill still reads as live.
     notifyProfileChanged();

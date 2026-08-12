@@ -19,6 +19,10 @@ abstract class Repository {
 
   Future<void> signOut();
 
+  /// Fires when the session appears or disappears, so the app can swap
+  /// between the sign-in screen and the main shell without polling.
+  Stream<bool> authChanges() => const Stream.empty();
+
   /// Fires whenever a day's outcome changes for you or a friend. Backends
   /// without live updates return an empty stream and screens just refresh
   /// on resume instead.

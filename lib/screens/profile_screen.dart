@@ -113,20 +113,17 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       } else if (!monitoring && open.isNotEmpty) {
         await repo.logMonitoringOff('detected');
       }
-      // Downtime in the last 24 hours, measured as the window minus the
-      // time sessions actually covered. Counting coverage rather than gaps
-      // means an open session, or downtime before the first session, can't
-      // be missed.
+      // Time today that nothing was counted: since midnight, minus what
+      // the current count covers. Restarting mid-morning means every hour
+      // before it is missed, because the threshold count began from zero.
       final now = DateTime.now();
-      final since = now.subtract(const Duration(hours: 24));
-      var covered = Duration.zero;
-      for (final x in sessions) {
-        final start = x.startedAt.isAfter(since) ? x.startedAt : since;
-        final end = x.endedAt ?? now;
-        if (end.isAfter(start)) covered += end.difference(start);
-      }
-      final window = now.difference(since);
-      final offSince = covered >= window ? Duration.zero : window - covered;
+      final midnight = DateTime(now.year, now.month, now.day);
+      final countStart = countingSince != null && countingSince.isAfter(midnight)
+          ? countingSince
+          : midnight;
+      final counted = monitoring ? now.difference(countStart) : Duration.zero;
+      final elapsed = now.difference(midnight);
+      final offSince = counted >= elapsed ? Duration.zero : elapsed - counted;
       if (!mounted) return;
       setState(() {
         _monitoring = monitoring;
@@ -229,6 +226,28 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         donePartials.add(key);
       }
       await ScreenTime.clearPartials(donePartials);
+
+      // The rule: if counting doesn't cover the whole day, the day can't be
+      // judged. Grey it now rather than letting 23:59 record a pass we can't
+      // justify. A day already lost stays lost.
+      final startedAt = await ScreenTime.monitoringSince();
+      if (startedAt != null) {
+        final now = DateTime.now();
+        final midnight = DateTime(now.year, now.month, now.day);
+        if (startedAt.isAfter(midnight)) {
+          final me = await repo.me();
+          final existing = me.byDay[dateOnly(now)];
+          if (existing == null || existing.limitMet) {
+            await repo.checkIn(
+              day: now,
+              limitMet: false,
+              limitMinutes: limit,
+              source: 'auto',
+              partial: true,
+            );
+          }
+        }
+      }
       await _fillUnmonitoredGaps(repo, limit);
     } catch (_) {
       // Never let a drain failure block loading.

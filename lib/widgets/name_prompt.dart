@@ -53,7 +53,8 @@ Future<void> showNamePrompt(BuildContext context, Profile me) async {
       actions: [
         TextButton(
           onPressed: () async {
-            if (first.text.trim().isEmpty) return;
+            // Both names are required — the widget builds initials from them.
+            if (first.text.trim().isEmpty || last.text.trim().isEmpty) return;
             await repo.setNames(
               firstName: first.text.trim(),
               lastName: last.text.trim(),

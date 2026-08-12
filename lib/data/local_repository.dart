@@ -460,4 +460,7 @@ class LocalRepository implements Repository {
     String? lastName,
     String? nickname,
   }) async {}
+
+  @override
+  Stream<bool> authChanges() => const Stream.empty();
 }
