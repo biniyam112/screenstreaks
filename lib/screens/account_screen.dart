@@ -169,7 +169,42 @@ class _AccountScreenState extends State<AccountScreen> {
                           color: AppColors.danger,
                           onTap: () async {
                             final auth = AuthScope.of(context);
-                            await auth.signOut();
+                            final ok = await showDialog<bool>(
+                              context: context,
+                              builder: (c) => AlertDialog(
+                                backgroundColor: c.cSurface,
+                                title: Text(
+                                  'Sign out?',
+                                  style: appFont(
+                                      fontWeight: FontWeight.w700,
+                                      color: c.cText),
+                                ),
+                                content: Text(
+                                  "Your streak and history are safe — you'll "
+                                  'just need to sign back in.',
+                                  style: appFont(
+                                      fontWeight: FontWeight.w500,
+                                      color: c.cTextSec),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(c, false),
+                                    child: Text('Cancel',
+                                        style: appFont(
+                                            color: c.cTextSec,
+                                            fontWeight: FontWeight.w600)),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(c, true),
+                                    child: Text('Sign out',
+                                        style: appFont(
+                                            color: AppColors.danger,
+                                            fontWeight: FontWeight.w700)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (ok == true) await auth.signOut();
                           },
                         ),
                       ],

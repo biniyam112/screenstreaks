@@ -43,6 +43,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Duration? _offSince;
   bool _stale = false;
   DateTime? _countingSince;
+  ({int state, DateTime? warnedAt, DateTime? overAt}) _dayState =
+      (state: 0, warnedAt: null, overAt: null);
 
   @override
   void initState() {
@@ -101,6 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // Counting restarts whenever the monitor is re-registered, so a start
       // time later than midnight means today is only partly measured.
       final countingSince = await ScreenTime.monitoringSince();
+      final dayState = await ScreenTime.dayState();
       // Keep the session log honest: open one when tracking is live, close it
       // when we find it stopped without being told.
       final sessions = await repo.monitoringSessions();
@@ -131,6 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         _offSince = offSince;
         _stale = stale;
         _countingSince = countingSince;
+        _dayState = dayState;
         _me = me.dailyLimitMinutes == savedGoal
             ? me
             : me.copyWith(dailyLimitMinutes: savedGoal);
@@ -395,6 +399,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     monitoring: ScreenTime.supported ? _monitoring : null,
                     stale: _stale,
                     countingSince: _countingSince,
+                    dayState: _dayState,
                     onRefreshMonitoring: _refreshMonitoring,
                     offSince: _offSince,
                     onFixMonitoring: () async {

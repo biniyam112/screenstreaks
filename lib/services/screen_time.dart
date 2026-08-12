@@ -176,4 +176,28 @@ class ScreenTime {
       return null;
     }
   }
+
+  /// Where today stands against the limit. iOS won't give us minutes, but
+  /// it does tell us when the warning and the threshold were crossed.
+  static Future<({int state, DateTime? warnedAt, DateTime? overAt})>
+      dayState() async {
+    if (!supported) return (state: 0, warnedAt: null, overAt: null);
+    try {
+      final raw = await _channel.invokeMethod('dayState');
+      if (raw is! Map) return (state: 0, warnedAt: null, overAt: null);
+      DateTime? at(String key) {
+        final v = (raw[key] as num?)?.toDouble() ?? 0;
+        if (v <= 0) return null;
+        return DateTime.fromMillisecondsSinceEpoch((v * 1000).round());
+      }
+
+      return (
+        state: (raw['state'] as num?)?.toInt() ?? 0,
+        warnedAt: at('warnedAt'),
+        overAt: at('overAt'),
+      );
+    } on PlatformException {
+      return (state: 0, warnedAt: null, overAt: null);
+    }
+  }
 }

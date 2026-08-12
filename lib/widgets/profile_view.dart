@@ -7,7 +7,7 @@ import 'progress_grid.dart';
 import 'usage_gauge.dart';
 import 'week_strip.dart';
 import 'month_grid.dart';
-import 'screen_time_report.dart';
+import 'day_state_card.dart';
 
 /// Reusable profile body used on the home screen and friend detail pages.
 ///
@@ -32,6 +32,7 @@ class ProfileView extends StatelessWidget {
     this.onFixMonitoring,
     this.stale = false,
     this.countingSince,
+    this.dayState,
     this.onRefreshMonitoring,
     this.onToggleMonitoring,
     this.offSince,
@@ -64,6 +65,9 @@ class ProfileView extends StatelessWidget {
 
   /// Monitoring is registered but hasn't reported in days.
   final bool stale;
+
+  /// Where today stands: 0 under, 1 approaching, 2 over.
+  final ({int state, DateTime? warnedAt, DateTime? overAt})? dayState;
 
   /// When the current threshold count began. Later than midnight means
   /// today is only partly measured.
@@ -164,13 +168,15 @@ class ProfileView extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 12),
-        if (showTodayStatus == false && onOpenHistory != null)
-          _SectionCard(
-            title: 'Screen Time says',
-            child: const ScreenTimeReport(),
+        if (dayState != null) ...[
+          DayStateCard(
+            state: dayState!.state,
+            limitMinutes: profile.dailyLimitMinutes,
+            warnedAt: dayState!.warnedAt,
+            overAt: dayState!.overAt,
           ),
-        if (showTodayStatus == false && onOpenHistory != null)
           const SizedBox(height: 12),
+        ],
         _StatRow(profile: profile, passesLeft: passesLeft),
         const SizedBox(height: 12),
         GestureDetector(

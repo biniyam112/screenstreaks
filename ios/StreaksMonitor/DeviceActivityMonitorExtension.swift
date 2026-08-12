@@ -146,6 +146,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // The warning event fires 30 minutes short of the limit.
         if event.rawValue == "streaks.probe.warning" {
             log("approaching limit")
+            // Remember when, so the app can show where the day stands.
+            defaults?.set(Date(), forKey: "warned_at_" + todayKey)
             notify("Half an hour left",
                    "You're 30 minutes from your limit today.")
             return
@@ -157,6 +159,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         var lost = defaults?.stringArray(forKey: "lost_days") ?? []
         if !lost.contains(todayKey) { lost.append(todayKey) }
         defaults?.set(Array(lost.suffix(30)), forKey: "lost_days")
+        defaults?.set(Date(), forKey: "over_at_" + todayKey)
         log("⚠️ over limit")
         notify("Over your limit", "Today's streak is broken. Fresh start tomorrow.")
     }

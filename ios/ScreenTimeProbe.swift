@@ -138,6 +138,22 @@ enum ScreenTimeProbe {
                     .object(forKey: "monitoring_started") as? Date
                 result(d?.timeIntervalSince1970 ?? 0)
 
+            case "dayState":
+                // Where today stands: 0 under, 1 approaching, 2 over, with
+                // the time each was reached so the app can say when.
+                let f = DateFormatter()
+                f.dateFormat = "yyyy-MM-dd"
+                f.timeZone = .current
+                let key = f.string(from: Date())
+                let defaults = UserDefaults(suiteName: suite)
+                let warned = defaults?.object(forKey: "warned_at_" + key) as? Date
+                let over = defaults?.object(forKey: "over_at_" + key) as? Date
+                result([
+                    "state": over != nil ? 2 : (warned != nil ? 1 : 0),
+                    "warnedAt": warned?.timeIntervalSince1970 ?? 0,
+                    "overAt": over?.timeIntervalSince1970 ?? 0,
+                ])
+
             case "activeLimit":
                 result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
 
