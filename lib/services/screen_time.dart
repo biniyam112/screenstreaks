@@ -200,4 +200,16 @@ class ScreenTime {
       return (state: 0, warnedAt: null, overAt: null);
     }
   }
+
+  /// Ask iOS for notification permission directly. The Screen Time extension
+  /// posts through UNUserNotificationCenter and inherits this.
+  static Future<bool> authorizeNotifications() async {
+    if (!supported) return false;
+    try {
+      return await _channel.invokeMethod('authorizeNotifications') as bool? ??
+          false;
+    } on PlatformException {
+      return false;
+    }
+  }
 }

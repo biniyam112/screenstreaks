@@ -24,8 +24,15 @@ class Notifications {
 
   static Future<void> init() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Ask separately via requestPermission so the prompt appears when the
+    // user turns alerts on, rather than at launch.
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
     await _instance.initialize(
-      settings: const InitializationSettings(android: android),
+      settings: const InitializationSettings(android: android, iOS: ios),
     );
 
     // Pre-create the channel so importance is respected on Android 8+.

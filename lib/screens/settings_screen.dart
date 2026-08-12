@@ -89,7 +89,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _toggleNotif(bool v) async {
     setState(() => _notif = v);
     await Prefs.setNotificationsEnabled(v);
-    if (v) await Notifications.requestPermission();
+    // The plugin has to be initialised before it can ask for anything —
+    // otherwise requestPermissions returns false without prompting.
+    if (v) {
+      await ScreenTime.authorizeNotifications();
+      await Notifications.init();
+      await Notifications.requestPermission();
+    }
   }
 
   Future<void> _saveNames() async {

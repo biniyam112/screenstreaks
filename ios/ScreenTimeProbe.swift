@@ -154,6 +154,15 @@ enum ScreenTimeProbe {
                     "overAt": over?.timeIntervalSince1970 ?? 0,
                 ])
 
+            case "authorizeNotifications":
+                // The extension posts through UNUserNotificationCenter, so
+                // ask there rather than through the Flutter plugin.
+                UNUserNotificationCenter.current().requestAuthorization(
+                    options: [.alert, .sound, .badge]
+                ) { granted, _ in
+                    DispatchQueue.main.async { result(granted) }
+                }
+
             case "activeLimit":
                 result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)
 
