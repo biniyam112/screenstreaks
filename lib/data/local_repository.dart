@@ -463,4 +463,11 @@ class LocalRepository implements Repository {
 
   @override
   Stream<bool> authChanges() => const Stream.empty();
+
+  @override
+  Future<Profile> signUpWithEmail(String email, String password) async =>
+      me();
+
+  @override
+  String? get currentEmail => null;
 }

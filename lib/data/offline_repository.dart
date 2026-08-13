@@ -277,4 +277,11 @@ class OfflineRepository implements Repository {
 
   @override
   Stream<bool> authChanges() => _inner.authChanges();
+
+  @override
+  Future<Profile> signUpWithEmail(String email, String password) =>
+      _inner.signUpWithEmail(email, password);
+
+  @override
+  String? get currentEmail => _inner.currentEmail;
 }

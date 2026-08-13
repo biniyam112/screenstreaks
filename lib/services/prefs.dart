@@ -55,6 +55,20 @@ class Prefs {
   /// True once the user has turned on Screen Time tracking. Survives app
   /// installs, unlike the app-group selection, so we can tell "declined"
   /// apart from "wiped by a reinstall".
+  /// Which account the running monitor belongs to. Counting against one
+  /// person's limit and apps means nothing for anyone else.
+  static Future<String?> monitorOwner() async =>
+      (await SharedPreferences.getInstance()).getString('monitor_owner');
+
+  static Future<void> setMonitorOwner(String? id) async {
+    final p = await SharedPreferences.getInstance();
+    if (id == null) {
+      await p.remove('monitor_owner');
+    } else {
+      await p.setString('monitor_owner', id);
+    }
+  }
+
   /// A limit change waiting for midnight. Changing the limit mid-day would
   /// reset the threshold count, so today keeps the old one.
   static Future<int?> pendingGoal() async =>

@@ -206,6 +206,27 @@ class _SettingsScreenState extends State<SettingsScreen>
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
               children: [
+                _SectionLabel('Account'),
+                AppCard(
+                  child: Row(
+                    children: [
+                      Icon(IconsaxPlusBold.sms,
+                          size: 18, color: context.cTextSec),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          RepoScope.of(context).currentEmail ?? 'Not signed in',
+                          style: appFont(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: context.cText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 _SectionLabel('Your name'),
                 AppCard(
                   child: Column(

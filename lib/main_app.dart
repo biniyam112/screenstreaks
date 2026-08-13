@@ -137,6 +137,18 @@ class _OnboardingGateState extends State<_OnboardingGate> {
   }
 
   Future<void> _check() async {
+    // Ask the account, not the device — a second person signing in on this
+    // phone needs their own setup, and Prefs can't tell them apart.
+    if (!mounted) return;
+    try {
+      final me = await RepoScope.of(context).me();
+      final done = (me.firstName ?? '').trim().isNotEmpty;
+      if (done) await Prefs.setOnboarded(true);
+      if (mounted) setState(() => _onboarded = done);
+      return;
+    } catch (_) {
+      // Offline or no profile yet — fall back to the device flag.
+    }
     final done = await Prefs.isOnboarded();
     if (mounted) setState(() => _onboarded = done);
   }

@@ -344,17 +344,17 @@ class SupabaseRepository implements Repository {
 
   @override
   Future<Profile> signInWithEmail(String email, String password) async {
-    AuthResponse res;
+    final AuthResponse res;
     try {
       res = await _supabase.auth
           .signInWithPassword(email: email, password: password);
     } on AuthException {
-      // No account yet — create one, then use the session it returns.
-      res = await _supabase.auth.signUp(email: email, password: password);
+      // Don't quietly create an account here — a typo'd password would make
+      // a second one and lose their streak.
+      throw Exception('Login failed. Check your email and password.');
     }
     if (res.session == null) {
-      throw Exception(
-          'Account created — confirm it from the email we sent, then sign in.');
+      throw Exception('Login failed. Check your email and password.');
     }
     return me();
   }
@@ -608,4 +608,22 @@ class SupabaseRepository implements Repository {
   @override
   Stream<bool> authChanges() => _supabase.auth.onAuthStateChange
       .map((event) => event.session != null);
+
+  @override
+  Future<Profile> signUpWithEmail(String email, String password) async {
+    final AuthResponse res;
+    try {
+      res = await _supabase.auth.signUp(email: email, password: password);
+    } on AuthException catch (e) {
+      throw Exception(e.message);
+    }
+    if (res.session == null) {
+      throw Exception(
+          'Account created — confirm it from the email we sent, then sign in.');
+    }
+    return me();
+  }
+
+  @override
+  String? get currentEmail => _supabase.auth.currentUser?.email;
 }

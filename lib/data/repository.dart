@@ -13,6 +13,13 @@ abstract class Repository {
   /// Sign in with Google. Returns the signed-in profile.
   Future<Profile> signInWithGoogle();
 
+  /// The signed-in account's email, for showing in settings.
+  String? get currentEmail => null;
+
+  /// Create a new account. Fails if the email is already registered.
+  Future<Profile> signUpWithEmail(String email, String password) =>
+      throw UnimplementedError('Email sign-up not supported by this backend');
+
   /// Email + password. Creates the account if it doesn't exist yet.
   Future<Profile> signInWithEmail(String email, String password) =>
       throw UnimplementedError('Email sign-in not supported by this backend');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../config.dart';
 import '../data/repo_scope.dart';
@@ -27,6 +28,105 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  /// Separate sheet so signing in can't quietly create an account.
+  Future<void> _signUp() async {
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final confirm = TextEditingController();
+    String? error;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.cSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            22,
+            24,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 28,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Create an account',
+                style: appFont(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: context.cText,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _Field(controller: email, hint: 'Email',
+                  keyboardType: TextInputType.emailAddress),
+              const SizedBox(height: 10),
+              _Field(controller: password, hint: 'Password', obscure: true),
+              const SizedBox(height: 10),
+              _Field(
+                  controller: confirm, hint: 'Confirm password', obscure: true),
+              if (error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  error!,
+                  style: appFont(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.danger,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: () async {
+                  final e = email.text.trim();
+                  final p1 = password.text;
+                  if (e.isEmpty || p1.length < 6) {
+                    setSheet(() => error =
+                        'Enter an email and a password of 6+ characters.');
+                    return;
+                  }
+                  if (p1 != confirm.text) {
+                    setSheet(() => error = "Passwords don't match.");
+                    return;
+                  }
+                  try {
+                    await RepoScope.of(context).signUpWithEmail(e, p1);
+                    if (sheetContext.mounted) Navigator.pop(sheetContext);
+                    widget.onSignedIn();
+                  } catch (err) {
+                    setSheet(() => error =
+                        err.toString().replaceFirst('Exception: ', ''));
+                  }
+                },
+                child: Text(
+                  'Sign up',
+                  style: appFont(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _signInEmail() async {
     final email = _email.text.trim();
     final password = _password.text;
@@ -40,6 +140,8 @@ class _SignInScreenState extends State<SignInScreen> {
     });
     try {
       await RepoScope.of(context).signInWithEmail(email, password);
+      // Tells iOS the credential worked, which is what prompts the save.
+      TextInput.finishAutofillContext();
       widget.onSignedIn();
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -136,17 +238,25 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
                 const SizedBox(height: 14),
               ],
-              _Field(
-                controller: _email,
-                hint: 'Email',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 10),
-              _Field(
-                controller: _password,
-                hint: 'Password',
-                obscure: true,
-                onSubmitted: (_) => _signInEmail(),
+              AutofillGroup(
+                child: Column(
+                  children: [
+                    _Field(
+                      controller: _email,
+                      hint: 'Email',
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username],
+                    ),
+                    const SizedBox(height: 10),
+                    _Field(
+                      controller: _password,
+                      hint: 'Password',
+                      obscure: true,
+                      onSubmitted: (_) => _signInEmail(),
+                      autofillHints: const [AutofillHints.password],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -172,6 +282,19 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: 16),
               _GoogleButton(busy: _busy, onTap: _busy ? null : _signIn),
+              const SizedBox(height: 14),
+              GestureDetector(
+                onTap: _busy ? null : _signUp,
+                child: Text(
+                  'New here? Create an account',
+                  textAlign: TextAlign.center,
+                  style: appFont(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
               if (!AppConfig.hasBackend) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -302,6 +425,7 @@ class _Field extends StatelessWidget {
     this.obscure = false,
     this.keyboardType,
     this.onSubmitted,
+    this.autofillHints,
   });
 
   final TextEditingController controller;
@@ -310,10 +434,15 @@ class _Field extends StatelessWidget {
   final TextInputType? keyboardType;
   final ValueChanged<String>? onSubmitted;
 
+  /// Marks the field as a credential so iOS offers to save it in Keychain
+  /// and fill it back in with Face ID.
+  final List<String>? autofillHints;
+
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      autofillHints: autofillHints,
       obscureText: obscure,
       keyboardType: keyboardType,
       autocorrect: false,

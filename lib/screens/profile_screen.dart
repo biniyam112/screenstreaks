@@ -42,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   int _passesLeft = 1;
   Duration? _offSince;
   bool _stale = false;
+  bool _askedToResume = false;
   DateTime? _countingSince;
   ({int state, DateTime? warnedAt, DateTime? overAt}) _dayState =
       (state: 0, warnedAt: null, overAt: null);
@@ -89,6 +90,15 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     try {
       final me = await repo.me();
       final friends = await repo.friends();
+      // A different account signing in inherits whatever was counting —
+      // against the previous person's limit and apps. Start over.
+      final owner = await Prefs.monitorOwner();
+      if (owner != null && owner != me.id) {
+        await ScreenTime.stopMonitoring();
+        await Prefs.setTrackingEnabled(false);
+      }
+      if (owner != me.id) await Prefs.setMonitorOwner(me.id);
+
       var savedGoal = await Prefs.goalMinutes();
       // A limit change made yesterday takes effect now — the new day's count
       // starts from zero anyway, so nothing is lost by switching here.
@@ -159,6 +169,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
       // Accounts made before these fields existed have no first name — ask
       // once so lists and the widget have something to show.
+      if (mounted) await _offerToResume();
+
       if (mounted && (me.firstName ?? '').trim().isEmpty) {
         await showNamePrompt(context, me);
         if (mounted) _load();
@@ -271,6 +283,50 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       debugPrint('DRAIN FAILED: $e');
       await ScreenTime.log('drain failed: $e');
     }
+  }
+
+  /// After a sign-in that left tracking off — a different account, or a
+  /// deliberate stop — offer to start it rather than silently not counting.
+  Future<void> _offerToResume() async {
+    if (_askedToResume || !ScreenTime.supported) return;
+    if (await Prefs.trackingEnabled()) return;
+    if (!mounted) return;
+    _askedToResume = true;
+
+    final start = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Start tracking?',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          "Nothing's being counted right now, so today won't be judged either "
+          'way. Turn it on to start.',
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text('Not now',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Start tracking',
+                style: appFont(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (start != true) return;
+
+    await ScreenTime.requestAuthorization();
+    if (!await ScreenTime.hasSelection()) await ScreenTime.pickApps();
+    final ok = await ScreenTime.startMonitoring(await Prefs.goalMinutes());
+    if (ok) await Prefs.setTrackingEnabled(true);
+    if (mounted) _load();
   }
 
   /// Re-register the monitor with the selection we already have. Fixes a
