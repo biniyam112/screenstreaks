@@ -25,6 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   int _goal = 120;
+  int? _pendingGoal;
   final _first = TextEditingController();
   final _last = TextEditingController();
   final _nick = TextEditingController();
@@ -61,9 +62,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Prefs survives restarts; LocalRepository doesn't. Prefer the persisted
     // value so the UI matches what monitoring actually uses.
     final savedGoal = await Prefs.goalMinutes();
+    final pendingGoal = await Prefs.pendingGoal();
     if (!mounted) return;
     setState(() {
       _goal = savedGoal;
+      _pendingGoal = pendingGoal;
       _first.text = me.firstName ?? '';
       _last.text = me.lastName ?? '';
       _nick.text = me.nickname ?? '';
@@ -279,6 +282,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                   // Disabled until the picker differs from the saved value.
                   onPressed: _goal == _savedGoal ? null : _saveGoal,
                 ),
+                if (_pendingGoal != null && _pendingGoal != _savedGoal) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'New limit of ${_pendingGoal! ~/ 60}h'
+                    '${_pendingGoal! % 60 == 0 ? '' : _pendingGoal! % 60}'
+                    ' starts tomorrow.',
+                    style: appFont(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 _SectionLabel('Alerts'),
                 AppCard(

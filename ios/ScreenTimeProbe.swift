@@ -200,6 +200,18 @@ enum ScreenTimeProbe {
                     .double(forKey: "last_callback_at") ?? 0
                 result(entries.isEmpty ? 0 : stamp)
 
+            case "appendLog":
+                // Lets Dart write into the same log the extension uses, so
+                // failures on the app side are visible in the probe.
+                let msg = (call.arguments as? String) ?? ""
+                let defaults = UserDefaults(suiteName: suite)
+                var entries = defaults?.stringArray(forKey: "probe_log") ?? []
+                let f = DateFormatter()
+                f.dateFormat = "MM-dd HH:mm:ss"
+                entries.insert("\(f.string(from: Date()))  \(msg)", at: 0)
+                defaults?.set(Array(entries.prefix(60)), forKey: "probe_log")
+                result("logged")
+
             case "readLog":
                 result(UserDefaults(suiteName: suite)?
                     .stringArray(forKey: "probe_log") ?? [])

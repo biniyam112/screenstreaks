@@ -89,7 +89,23 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     try {
       final me = await repo.me();
       final friends = await repo.friends();
-      final savedGoal = await Prefs.goalMinutes();
+      var savedGoal = await Prefs.goalMinutes();
+      // A limit change made yesterday takes effect now — the new day's count
+      // starts from zero anyway, so nothing is lost by switching here.
+      final pending = await Prefs.pendingGoal();
+      final startedAt0 = await ScreenTime.monitoringSince();
+      if (pending != null && pending != savedGoal) {
+        final now0 = DateTime.now();
+        final midnight0 = DateTime(now0.year, now0.month, now0.day);
+        if (startedAt0 == null || startedAt0.isBefore(midnight0)) {
+          // Clear the pending value only once the change has actually
+          // landed — otherwise a failed write loses it silently.
+          await repo.setDailyLimit(pending);
+          await Prefs.setGoalMinutes(pending);
+          await Prefs.setPendingGoal(null);
+          savedGoal = pending;
+        }
+      }
       // One personal pass a week.
       final spent = await repo.spentPasses();
       final weekAgo = DateTime.now().subtract(const Duration(days: 7));
@@ -249,8 +265,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         }
       }
       await _fillUnmonitoredGaps(repo, limit);
-    } catch (_) {
-      // Never let a drain failure block loading.
+    } catch (e) {
+      // Never let a drain failure block loading — but leave a trace, or a
+      // week of failed uploads looks identical to nothing happening.
+      debugPrint('DRAIN FAILED: $e');
+      await ScreenTime.log('drain failed: $e');
     }
   }
 

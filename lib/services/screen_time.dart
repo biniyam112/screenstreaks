@@ -212,4 +212,14 @@ class ScreenTime {
       return false;
     }
   }
+
+  /// Write a line into the probe log from Dart.
+  static Future<void> log(String message) async {
+    if (!supported) return;
+    try {
+      await _channel.invokeMethod('appendLog', message);
+    } on PlatformException {
+      // Logging must never throw.
+    }
+  }
 }

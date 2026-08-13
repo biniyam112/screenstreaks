@@ -55,6 +55,20 @@ class Prefs {
   /// True once the user has turned on Screen Time tracking. Survives app
   /// installs, unlike the app-group selection, so we can tell "declined"
   /// apart from "wiped by a reinstall".
+  /// A limit change waiting for midnight. Changing the limit mid-day would
+  /// reset the threshold count, so today keeps the old one.
+  static Future<int?> pendingGoal() async =>
+      (await SharedPreferences.getInstance()).getInt('pending_goal');
+
+  static Future<void> setPendingGoal(int? v) async {
+    final p = await SharedPreferences.getInstance();
+    if (v == null) {
+      await p.remove('pending_goal');
+    } else {
+      await p.setInt('pending_goal', v);
+    }
+  }
+
   static Future<bool> trackingEnabled() async =>
       (await SharedPreferences.getInstance()).getBool('tracking_enabled') ?? false;
 
