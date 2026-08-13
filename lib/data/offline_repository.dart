@@ -89,6 +89,7 @@ class OfflineRepository implements Repository {
       usedMinutes: usedMinutes,
       limitMinutes: limitMinutes,
       source: source,
+      partial: partial,
     );
     // 1) durable local record  2) reflect in cache now  3) push best-effort.
     await _store.enqueue(record);
@@ -178,6 +179,7 @@ class OfflineRepository implements Repository {
             usedMinutes: r.usedMinutes,
             limitMinutes: r.limitMinutes,
             source: r.source,
+            partial: r.partial,
           );
           await _store.dequeueDay(r.day);
         } catch (_) {

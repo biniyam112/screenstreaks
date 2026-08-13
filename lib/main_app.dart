@@ -92,9 +92,9 @@ class _MainAppState extends State<MainApp> {
         return AuthScope(
           onSignOut: () async {
             await RepoScope.of(context).signOut();
-            // Clear the device onboarding flag so the next account (which may
-            // be a different person on this device) sets up fresh.
-            await Prefs.setOnboarded(false);
+            // Don't clear the onboarding flag — signing out and back in
+            // shouldn't re-run setup, and re-running it resets the day's
+            // count and lets the limit be changed again.
             // Give Supabase a moment to clear the session before we ask,
             // or isSignedIn still reports true and the tree doesn't swap.
             await Future<void>.delayed(const Duration(milliseconds: 150));

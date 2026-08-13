@@ -95,17 +95,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _enableTracking() async {
     final ok = await ScreenTime.requestAuthorization();
     if (!ok || !mounted) return;
-    final apps = await ScreenTime.pickApps();
+    await ScreenTime.pickApps();
     if (!mounted) return;
-    if (apps == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pick individual apps too — categories alone '
-              "don't reliably count."),
-          duration: Duration(seconds: 6),
-        ),
-      );
-    }
+
     final started = await ScreenTime.startMonitoring(_limit);
     if (mounted) setState(() => _tracking = started);
   }
