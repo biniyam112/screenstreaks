@@ -248,12 +248,13 @@ class OfflineRepository implements Repository {
   Stream<void> recordChanges() => _inner.recordChanges();
 
   @override
-  Future<List<({DateTime day, String? groupId})>> spentPasses() =>
-      _inner.spentPasses();
+  Future<List<({DateTime day, String? groupId, String kind})>>
+      spentPasses() => _inner.spentPasses();
 
   @override
-  Future<void> spendPass(DateTime day, {String? groupId}) =>
-      _inner.spendPass(day, groupId: groupId);
+  Future<void> spendPass(DateTime day,
+          {String? groupId, String kind = 'personal'}) =>
+      _inner.spendPass(day, groupId: groupId, kind: kind);
 
   @override
   Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>

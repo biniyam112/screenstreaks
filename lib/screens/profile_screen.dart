@@ -43,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Duration? _offSince;
   bool _stale = false;
   bool _askedToResume = false;
+  bool _askedAboutSleep = false;
   DateTime? _countingSince;
   ({int state, DateTime? warnedAt, DateTime? overAt}) _dayState =
       (state: 0, warnedAt: null, overAt: null);
@@ -170,6 +171,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // Accounts made before these fields existed have no first name — ask
       // once so lists and the widget have something to show.
       if (mounted) await _offerToResume();
+      if (mounted) await _offerSleepPass(repo, me);
 
       if (mounted && (me.firstName ?? '').trim().isEmpty) {
         await showNamePrompt(context, me);
@@ -282,6 +284,80 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // week of failed uploads looks identical to nothing happening.
       debugPrint('DRAIN FAILED: $e');
       await ScreenTime.log('drain failed: $e');
+    }
+  }
+
+  /// A threshold crossed between 2 and 5am is almost certainly a screen
+  /// left on overnight. Offer the sleep pass — separate from the weekly one,
+  /// and only if they haven't used it.
+  Future<void> _offerSleepPass(Repository repo, Profile me) async {
+    if (_askedAboutSleep || !ScreenTime.supported) return;
+    _askedAboutSleep = true;
+
+    final overTimes = await ScreenTime.overTimes();
+    if (overTimes.isEmpty) return;
+
+    final spent = await repo.spentPasses();
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    final usedSleep = spent.any(
+        (p) => p.kind == 'sleep' && p.day.isAfter(weekAgo));
+    if (usedSleep) return;
+
+    // Most recent qualifying miss that hasn't already been recovered.
+    final claimed = spent.map((p) => dateOnly(p.day)).toSet();
+    DateTime? candidate;
+    for (final entry in overTimes.entries) {
+      if (!ScreenTime.looksLikeSleep(entry.value)) continue;
+      final day = ScreenTime.parseDay(entry.key);
+      if (day == null || claimed.contains(dateOnly(day))) continue;
+      final record = me.byDay[dateOnly(day)];
+      if (record == null || record.limitMet || record.partial) continue;
+      if (candidate == null || day.isAfter(candidate)) candidate = day;
+    }
+    if (candidate == null || !mounted) return;
+
+    final at = overTimes[ScreenTime.dayKey(candidate)]!;
+    final hh = at.hour.toString().padLeft(2, '0');
+    final mm = at.minute.toString().padLeft(2, '0');
+
+    final claim = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Screen left on?',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: Text(
+          'You went over at ' + hh + ':' + mm + ', which usually means a video kept '
+          'playing or the screen never locked. Claim your sleep pass to '
+          "recover that day — one a week, separate from your normal pass.",
+          style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: Text('It was me',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: Text('Claim it',
+                style: appFont(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (claim != true) return;
+
+    try {
+      await repo.spendPass(candidate, kind: 'sleep');
+      if (mounted) _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
     }
   }
 

@@ -456,24 +456,27 @@ class SupabaseRepository implements Repository {
   }
 
   @override
-  Future<List<({DateTime day, String? groupId})>> spentPasses() async {
+  Future<List<({DateTime day, String? groupId, String kind})>>
+      spentPasses() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
     final rows = await _supabase
         .from('streak_passes')
-        .select('day, group_id')
+        .select('day, group_id, kind')
         .eq('user_id', userId);
     return [
       for (final r in rows)
         (
           day: DateTime.parse(r['day'] as String),
           groupId: r['group_id'] as String?,
+          kind: r['kind'] as String? ?? 'personal',
         ),
     ];
   }
 
   @override
-  Future<void> spendPass(DateTime day, {String? groupId}) async {
+  Future<void> spendPass(DateTime day,
+      {String? groupId, String kind = 'personal'}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('Not signed in');
 
@@ -489,18 +492,23 @@ class SupabaseRepository implements Repository {
         .eq('user_id', userId)
         .gte('created_at', since.toIso8601String());
     q = groupId == null ? q.isFilter('group_id', null) : q.eq('group_id', groupId);
+    // Sleep passes have their own weekly allowance.
+    q = q.eq('kind', kind);
 
     final recent = await q;
     if (recent.isNotEmpty) {
-      throw Exception(groupId == null
-          ? 'No personal pass left this week'
-          : 'This group has used its pass this month');
+      throw Exception(groupId != null
+          ? 'This group has used its pass this month'
+          : (kind == 'sleep'
+              ? 'No sleep pass left this week'
+              : 'No personal pass left this week'));
     }
 
     await _supabase.from('streak_passes').insert({
       'user_id': userId,
       'group_id': groupId,
       'day': day.toIso8601String().split('T').first,
+      'kind': kind,
     });
   }
 

@@ -138,6 +138,19 @@ enum ScreenTimeProbe {
                     .object(forKey: "monitoring_started") as? Date
                 result(d?.timeIntervalSince1970 ?? 0)
 
+            case "overTimes":
+                // When each recent miss crossed the threshold — a crossing
+                // between 2 and 5am is almost certainly a screen left on.
+                let defaults = UserDefaults(suiteName: suite)
+                var out: [String: Double] = [:]
+                for (key, value) in defaults?.dictionaryRepresentation() ?? [:] {
+                    guard key.hasPrefix("over_at_"),
+                          let date = value as? Date else { continue }
+                    out[String(key.dropFirst("over_at_".count))] =
+                        date.timeIntervalSince1970
+                }
+                result(out)
+
             case "dayState":
                 // Where today stands: 0 under, 1 approaching, 2 over, with
                 // the time each was reached so the app can say when.

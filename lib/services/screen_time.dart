@@ -222,4 +222,32 @@ class ScreenTime {
       // Logging must never throw.
     }
   }
+
+  /// Day key to the time its threshold fired, for spotting overnight misses.
+  static Future<Map<String, DateTime>> overTimes() async {
+    if (!supported) return const {};
+    try {
+      final raw = await _channel.invokeMethod('overTimes');
+      if (raw is! Map) return const {};
+      return {
+        for (final e in raw.entries)
+          '${e.key}': DateTime.fromMillisecondsSinceEpoch(
+              (((e.value as num).toDouble()) * 1000).round()),
+      };
+    } on PlatformException {
+      return const {};
+    }
+  }
+
+  /// A threshold crossed between 2 and 5am is a screen left on, not use.
+  static bool looksLikeSleep(DateTime at) => at.hour >= 2 && at.hour < 5;
+
+  /// The 'yyyy-MM-dd' key the extension stores a day under.
+  /// The 'yyyy-MM-dd' key the extension stores a day under.
+  static String dayKey(DateTime d) {
+    final y = d.year.toString().padLeft(4, '0');
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return y + '-' + m + '-' + day;
+  }
 }

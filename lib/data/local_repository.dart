@@ -436,10 +436,12 @@ class LocalRepository implements Repository {
   Stream<void> recordChanges() => const Stream.empty();
 
   @override
-  Future<List<({DateTime day, String? groupId})>> spentPasses() async => const [];
+  Future<List<({DateTime day, String? groupId, String kind})>>
+      spentPasses() async => const [];
 
   @override
-  Future<void> spendPass(DateTime day, {String? groupId}) async {}
+  Future<void> spendPass(DateTime day,
+      {String? groupId, String kind = 'personal'}) async {}
 
   @override
   Future<List<({DateTime startedAt, DateTime? endedAt, String? reason})>>

@@ -98,11 +98,14 @@ abstract class Repository {
 
   /// Days you've recovered with a pass, personal and per-group.
   /// Keys are 'yyyy-MM-dd'; the value is the group id, or null if personal.
-  Future<List<({DateTime day, String? groupId})>> spentPasses() async => const [];
+  Future<List<({DateTime day, String? groupId, String kind})>>
+      spentPasses() async => const [];
 
   /// Spend a pass to recover [day]. Pass a group id to save that group's
   /// streak, or null for your own. Throws if none are left.
-  Future<void> spendPass(DateTime day, {String? groupId}) =>
+  /// [kind] is 'personal' or 'sleep' — separate weekly allowances, since a
+  /// threshold crossed at 3am isn't the same kind of miss.
+  Future<void> spendPass(DateTime day, {String? groupId, String kind = 'personal'}) =>
       throw UnimplementedError('Passes not supported by this backend');
 
   /// Record today's outcome (manual check-in on iOS, or an automated write).
