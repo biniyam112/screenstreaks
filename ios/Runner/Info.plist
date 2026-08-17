@@ -73,6 +73,13 @@
   <dict>
     <key>CFBundleURLSchemes</key>
     <array>
+      <!-- Where Supabase sends people back after browser-based OAuth. -->
+      <string>undr</string>
+    </array>
+  </dict>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
       <string>com.googleusercontent.apps.760423110588-pvvmvgcjusp1f39ujnrek3dio12u9164</string>
     </array>
   </dict>

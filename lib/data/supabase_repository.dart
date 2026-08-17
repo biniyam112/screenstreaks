@@ -18,40 +18,39 @@ class SupabaseRepository implements Repository {
 
   @override
   Future<Profile> signInWithGoogle() async {
-    try {
-      // v7 API: authenticate() throws GoogleSignInException on failure.
-      final googleUser = await _googleSignIn.authenticate();
-      final googleName = googleUser.displayName;
-      final idToken = googleUser.authentication.idToken;
+    // Browser-based OAuth rather than an ID token. google_sign_in 7.x embeds
+    // a nonce we can't read, which Supabase rejects — this flow has none.
+    final completer = Completer<Profile>();
+    late final StreamSubscription<AuthState> sub;
 
-      if (idToken == null) throw Exception('No ID token from Google');
-
-      final response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-      );
-
-      final user = response.user;
-      if (user == null) throw Exception('Failed to sign in');
-
-      // Adopt the real Google name if the profile is still on its default.
-      var profile = await me();
-      if (profile.displayName.trim().isEmpty ||
-          profile.displayName == 'Friend') {
-        final meta = user.userMetadata;
-        final name = (googleName ??
-                meta?['full_name'] as String? ??
-                meta?['name'] as String?)
-            ?.trim();
-        if (name != null && name.isNotEmpty) {
-          await setDisplayName(name);
-          profile = await me();
-        }
+    sub = _supabase.auth.onAuthStateChange.listen((event) async {
+      if (event.session == null) return;
+      await sub.cancel();
+      try {
+        completer.complete(await me());
+      } catch (e) {
+        completer.completeError(e);
       }
-      return profile;
-    } catch (e) {
-      throw Exception('Google sign-in failed: $e');
+    });
+
+    final started = await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'undr://login-callback',
+      authScreenLaunchMode: LaunchMode.externalApplication,
+    );
+    if (!started) {
+      await sub.cancel();
+      throw Exception("Couldn't open Google sign-in.");
     }
+
+    // Don't hang forever if they close the browser without finishing.
+    return completer.future.timeout(
+      const Duration(minutes: 3),
+      onTimeout: () async {
+        await sub.cancel();
+        throw Exception('Sign-in was cancelled.');
+      },
+    );
   }
 
   @override
