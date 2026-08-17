@@ -9,6 +9,7 @@ import '../data/local_store.dart';
 import '../models/models.dart';
 import 'notifications.dart';
 import 'prefs.dart';
+import 'screen_time.dart';
 import 'usage_service.dart';
 
 const _kTaskName = 'checkScreenTime';
@@ -25,9 +26,33 @@ void callbackDispatcher() {
     DartPluginRegistrant.ensureInitialized();
 
     try {
+      const store0 = LocalStore();
+      final goal = await Prefs.goalMinutes();
+
+      // iOS: the Screen Time extension already wrote yesterday's outcome to
+      // the app group at 23:59. Queue it and push, so a friend's result
+      // doesn't wait for them to open the app.
+      if (Platform.isIOS) {
+        final pending = await ScreenTime.pendingOutcomes();
+        for (final entry in pending.entries) {
+          final day = ScreenTime.parseDay(entry.key);
+          if (day == null) continue;
+          await store0.enqueue(DailyRecord(
+            day: dateOnly(day),
+            limitMet: entry.value,
+            limitMinutes: goal,
+            source: 'auto',
+          ));
+        }
+        await _pushOutbox(store0);
+        if (pending.isNotEmpty) {
+          await ScreenTime.clearPending(pending.keys.toList());
+        }
+        return true;
+      }
+
       if (!await UsageService.hasPermission()) return true;
 
-      final goal = await Prefs.goalMinutes();
       final used = await UsageService.todayMinutes();
 
       // 1) Record today's outcome durably. This shares the exact same outbox
@@ -118,9 +143,20 @@ class Background {
   Background._();
 
   static Future<void> start() async {
-    if (!Platform.isAndroid) return;
-
     await Workmanager().initialize(callbackDispatcher);
+
+    if (Platform.isIOS) {
+      // iOS decides when this actually runs — usually overnight, sometimes
+      // not for hours. One run in the small hours is enough to push the
+      // previous day's result.
+      await Workmanager().registerPeriodicTask(
+        _kUniqueName,
+        _kTaskName,
+        frequency: const Duration(hours: 1),
+      );
+      return;
+    }
+
     // Android's minimum periodic interval is 15 minutes. networkType.notRequired
     // so we still *record* usage offline; the push inside simply no-ops until
     // a connection is available.

@@ -5,6 +5,7 @@ import '../theme.dart';
 import '../widgets/month_grid.dart';
 import '../widgets.dart';
 import '../data/repo_scope.dart';
+import '../services/screen_time.dart';
 
 const _monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -27,11 +28,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
   /// Days a pass was spent on — they read as met, so the sheet needs to
   /// know which were recovered rather than genuinely held.
   Map<DateTime, String> _passDays = const {};
+  /// Recorded on this phone, not yet on the server.
+  Set<DateTime> _pending = const {};
 
   @override
   void initState() {
     super.initState();
     _loadPasses();
+    _loadPending();
+  }
+
+  Future<void> _loadPending() async {
+    // The extension's unread outcomes, plus anything queued but unsynced.
+    final outcomes = await ScreenTime.pendingOutcomes();
+    final days = <DateTime>{};
+    for (final key in outcomes.keys) {
+      final d = ScreenTime.parseDay(key);
+      if (d != null) days.add(dateOnly(d));
+    }
+    if (mounted) setState(() => _pending = days);
   }
 
   Future<void> _loadPasses() async {
@@ -44,6 +59,43 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _onTapDay(DateTime day, DailyRecord? record) async {
     final canSpend = record != null && !record.limitMet && !record.partial;
+
+    if (_pending.contains(dateOnly(day))) {
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: context.cSurface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        builder: (c) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Not synced yet',
+                  style: appFont(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: context.cText)),
+              const SizedBox(height: 8),
+              Text(
+                "This day was recorded on your phone but hasn't reached the "
+                "server, so your friends can't see it yet. It'll upload on "
+                'its own.',
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: context.cTextSec,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
 
     final passKind = _passDays[dateOnly(day)];
     if (passKind != null) {
@@ -244,7 +296,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-                MonthGrid(profile: profile, month: m, onTapDay: _onTapDay),
+                MonthGrid(
+                  profile: profile,
+                  month: m,
+                  onTapDay: _onTapDay,
+                  pending: _pending,
+                ),
                 const SizedBox(height: 26),
               ],
             );

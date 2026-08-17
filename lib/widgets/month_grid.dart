@@ -13,6 +13,7 @@ class MonthGrid extends StatelessWidget {
     required this.month,
     this.showLabels = true,
     this.onTapDay,
+    this.pending = const {},
   });
 
   final Profile profile;
@@ -24,6 +25,10 @@ class MonthGrid extends StatelessWidget {
 
   /// Tapping a logged day — used to spend a pass on a miss.
   final void Function(DateTime day, DailyRecord? record)? onTapDay;
+
+  /// Days recorded on this phone but not yet pushed to the server. Distinct
+  /// from unjudged — we know the answer, it just hasn't synced.
+  final Set<DateTime> pending;
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +54,7 @@ class MonthGrid extends StatelessWidget {
           record: record,
           isToday: day == today,
           isFuture: day.isAfter(today),
+          isPending: pending.contains(day),
         ),
       ));
     }
@@ -95,12 +101,14 @@ class _Cell extends StatelessWidget {
     required this.record,
     required this.isToday,
     required this.isFuture,
+    this.isPending = false,
   });
 
   final DateTime day;
   final DailyRecord? record;
   final bool isToday;
   final bool isFuture;
+  final bool isPending;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +118,10 @@ class _Cell extends StatelessWidget {
     if (isFuture) {
       fill = Colors.transparent;
       text = context.cTextTer.withValues(alpha: 0.4);
+    } else if (isPending) {
+      // Recorded here but not yet on the server — we know, nobody else does.
+      fill = AppColors.accent.withValues(alpha: 0.45);
+      text = Colors.white;
     } else if (record == null) {
       fill = context.cDivider.withValues(alpha: 0.35);
       text = context.cTextTer;
