@@ -24,9 +24,76 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   late Profile profile = widget.profile;
+  /// Days a pass was spent on — they read as met, so the sheet needs to
+  /// know which were recovered rather than genuinely held.
+  Map<DateTime, String> _passDays = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPasses();
+  }
+
+  Future<void> _loadPasses() async {
+    final spent = await RepoScope.of(context).spentPasses();
+    if (!mounted) return;
+    setState(() {
+      _passDays = {for (final p in spent) dateOnly(p.day): p.kind};
+    });
+  }
 
   Future<void> _onTapDay(DateTime day, DailyRecord? record) async {
     final canSpend = record != null && !record.limitMet && !record.partial;
+
+    final passKind = _passDays[dateOnly(day)];
+    if (passKind != null) {
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: context.cSurface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        builder: (c) => Padding(
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pass spent',
+                style: appFont(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: context.cText,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                switch (passKind) {
+                  'sleep' =>
+                    'You claimed your sleep pass for this day — the screen '
+                        'was on overnight rather than being used.',
+                  'group' =>
+                    "This day was covered by the group's weekly pass.",
+                  'group_debt' =>
+                    "This day was covered by the group's pass, borrowed "
+                        'against next week.',
+                  _ => 'You spent your weekly pass to recover this day, so '
+                      'it counts toward your streak.',
+                },
+                style: appFont(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: context.cTextSec,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
 
     final (title, body) = switch (record) {
       null => (

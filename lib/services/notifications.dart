@@ -56,6 +56,11 @@ class Notifications {
     return await android?.requestNotificationsPermission() ?? false;
   }
 
+  /// Post a one-off notification — used for group events the app spots
+  /// when it loads rather than anything iOS tells us directly.
+  static Future<void> post(int id, String title, String body) =>
+      _show(id, title, body);
+
   static Future<void> _show(int id, String title, String body) async {
     await _instance.show(
       id: id,

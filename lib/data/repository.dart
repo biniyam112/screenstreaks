@@ -49,6 +49,19 @@ abstract class Repository {
   Future<void> addToGroup(String groupId, String userId) =>
       throw UnimplementedError('Groups not supported by this backend');
 
+  /// Propose someone for a group you're in. The moderator approves before
+  /// they hear anything about it.
+  Future<void> proposeForGroup(String groupId, String userId) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
+  /// Proposals waiting on the moderator, for groups you administer.
+  Future<List<({String id, String groupId, String groupName, String proposedName})>>
+      pendingProposals() async => const [];
+
+  /// Approve a proposal — the invite then goes to the person — or reject it.
+  Future<void> decideProposal(String requestId, bool approve) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
   /// Invite a friend to a group you administer.
   Future<void> inviteToGroup(String groupId, String userId) =>
       throw UnimplementedError('Groups not supported by this backend');
@@ -95,6 +108,10 @@ abstract class Repository {
   /// Close the open session. [reason] is 'manual' when the user switched it
   /// off, 'detected' when we found it already stopped.
   Future<void> logMonitoringOff(String reason) async {}
+
+  /// Days each group has recovered by spending its weekly pass, keyed by
+  /// group id. Those days count as held for the whole group.
+  Future<Map<String, Set<DateTime>>> groupRecoveredDays() async => const {};
 
   /// Days you've recovered with a pass, personal and per-group.
   /// Keys are 'yyyy-MM-dd'; the value is the group id, or null if personal.

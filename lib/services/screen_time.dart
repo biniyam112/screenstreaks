@@ -250,4 +250,26 @@ class ScreenTime {
     final day = d.day.toString().padLeft(2, '0');
     return y + '-' + m + '-' + day;
   }
+
+  /// Days the overnight watcher flagged — an hour of use between 2 and 5am.
+  static Future<List<String>> sleepFlags() async {
+    if (!supported) return const [];
+    try {
+      final raw = await _channel.invokeMethod('sleepFlags');
+      return (raw as List?)?.map((e) => '$e').toList() ?? const [];
+    } on PlatformException {
+      return const [];
+    }
+  }
+
+  /// Lines the monitor extension has written, newest first.
+  static Future<List<String>> readLog() async {
+    if (!supported) return const [];
+    try {
+      final raw = await _channel.invokeMethod('readLog');
+      return (raw as List?)?.map((e) => '$e').toList() ?? const [];
+    } on PlatformException {
+      return const [];
+    }
+  }
 }

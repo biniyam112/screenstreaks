@@ -13,6 +13,7 @@ import '../theme_provider.dart';
 import '../widgets.dart';
 import '../services/screen_time.dart';
 import '../models/models.dart';
+import 'log_screen.dart';
 
 /// Daily goal, alerts, appearance, usage-access (Android), and sign-out.
 class SettingsScreen extends StatefulWidget {
@@ -80,6 +81,49 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _saveGoal() async {
     final m = _goal;
+
+    // Changing the limit restarts the threshold count from zero, wiping
+    // today's progress — so a change while tracking waits for midnight.
+    if (_stLimit > 0) {
+      final oldH = _savedGoal ~/ 60;
+      final oldM = _savedGoal % 60;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          backgroundColor: c.cSurface,
+          title: Text('Starts tomorrow',
+              style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+          content: Text(
+            "Today's count is already running, so a new limit can't judge it "
+            'fairly. This takes effect at midnight — today stays on '
+            '${oldH}h${oldM == 0 ? '' : oldM}.',
+            style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text('Cancel',
+                  style: appFont(
+                      color: c.cTextSec, fontWeight: FontWeight.w600)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: Text('Set for tomorrow',
+                  style: appFont(
+                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      await Prefs.setPendingGoal(m);
+      setState(() {
+        _pendingGoal = m;
+        _goal = _savedGoal;
+      });
+      return;
+    }
+
     await RepoScope.of(context).setDailyLimit(m);
     await Prefs.setGoalMinutes(m);
     if (!mounted) return;
@@ -290,6 +334,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                 ],
+                const SizedBox(height: 12),
+                if (ScreenTime.supported)
+                  ModernButton(
+                    label: 'Activity log',
+                    icon: IconsaxPlusBold.document_text,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LogScreen()),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 _SectionLabel('Alerts'),
                 AppCard(
@@ -367,16 +420,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                           },
                         ),
                         const SizedBox(height: 10),
-                        // TEMPORARY: 2-minute threshold for testing. Remove.
-                        ModernButton(
-                          label: 'TEST · track 2 minutes',
-                          onPressed: _stHasApps
-                              ? () async {
-                                  await ScreenTime.startMonitoring(2);
-                                  await _refreshScreenTime();
-                                }
-                              : null,
-                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Deleting Undr stops tracking. Days it missed '

@@ -55,6 +55,18 @@ class Prefs {
   /// True once the user has turned on Screen Time tracking. Survives app
   /// installs, unlike the app-group selection, so we can tell "declined"
   /// apart from "wiped by a reinstall".
+  /// Group passes we've already told the user about, as 'groupId:day'.
+  static Future<Set<String>> announcedPasses() async =>
+      ((await SharedPreferences.getInstance())
+              .getStringList('announced_passes') ??
+          const [])
+          .toSet();
+
+  static Future<void> setAnnouncedPasses(Set<String> keys) async =>
+      (await SharedPreferences.getInstance())
+          // Keep it bounded — old entries can't be re-announced anyway.
+          .setStringList('announced_passes', keys.toList().take(200).toList());
+
   /// Which account the running monitor belongs to. Counting against one
   /// person's limit and apps means nothing for anyone else.
   static Future<String?> monitorOwner() async =>
@@ -78,9 +90,21 @@ class Prefs {
     final p = await SharedPreferences.getInstance();
     if (v == null) {
       await p.remove('pending_goal');
+      await p.remove('pending_goal_set_on');
     } else {
       await p.setInt('pending_goal', v);
+      // The day it was queued — it applies once a midnight has passed.
+      final now = DateTime.now();
+      await p.setString('pending_goal_set_on',
+          DateTime(now.year, now.month, now.day).toIso8601String());
     }
+  }
+
+  /// The day a pending limit was queued on, or null if none is waiting.
+  static Future<DateTime?> pendingGoalSetOn() async {
+    final raw =
+        (await SharedPreferences.getInstance()).getString('pending_goal_set_on');
+    return raw == null ? null : DateTime.tryParse(raw);
   }
 
   static Future<bool> trackingEnabled() async =>

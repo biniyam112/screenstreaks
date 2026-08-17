@@ -348,10 +348,11 @@ class SupabaseRepository implements Repository {
     try {
       res = await _supabase.auth
           .signInWithPassword(email: email, password: password);
-    } on AuthException {
+    } on AuthException catch (e) {
       // Don't quietly create an account here — a typo'd password would make
-      // a second one and lose their streak.
-      throw Exception('Login failed. Check your email and password.');
+      // a second one and lose their streak. Show what Supabase said, though,
+      // or an unconfirmed account looks the same as a wrong password.
+      throw Exception('Login failed: ' + e.message);
     }
     if (res.session == null) {
       throw Exception('Login failed. Check your email and password.');
@@ -634,4 +635,75 @@ class SupabaseRepository implements Repository {
 
   @override
   String? get currentEmail => _supabase.auth.currentUser?.email;
+
+  @override
+  Future<void> proposeForGroup(String groupId, String userId) async {
+    // 'proposed' waits on the moderator; only then does it become an invite.
+    await _supabase.from('group_requests').upsert({
+      'group_id': groupId,
+      'user_id': userId,
+      'status': 'proposed',
+    }, onConflict: 'group_id,user_id');
+  }
+
+  @override
+  Future<List<({String id, String groupId, String groupName, String proposedName})>>
+      pendingProposals() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return const [];
+    try {
+      final rows = await _supabase
+          .from('group_requests')
+          .select('id, group_id, user_id, groups(name, admin_id)')
+          .eq('status', 'proposed');
+
+      final out = <({String id, String groupId, String groupName, String proposedName})>[];
+      for (final r in rows) {
+        final g = r['groups'] as Map<String, dynamic>?;
+        if (g == null || g['admin_id'] != userId) continue;
+        final p = await _supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', r['user_id'] as String)
+            .maybeSingle();
+        out.add((
+          id: r['id'] as String,
+          groupId: r['group_id'] as String,
+          groupName: g['name'] as String? ?? 'a group',
+          proposedName: (p?['display_name'] as String?) ?? 'Someone',
+        ));
+      }
+      return out;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> decideProposal(String requestId, bool approve) async {
+    await _supabase
+        .from('group_requests')
+        .update({'status': approve ? 'pending' : 'declined'})
+        .eq('id', requestId);
+  }
+
+  @override
+  Future<Map<String, Set<DateTime>>> groupRecoveredDays() async {
+    try {
+      final rows = await _supabase
+          .from('streak_passes')
+          .select('group_id, day')
+          .not('group_id', 'is', null);
+
+      final out = <String, Set<DateTime>>{};
+      for (final r in rows) {
+        final gid = r['group_id'] as String;
+        out.putIfAbsent(gid, () => <DateTime>{})
+            .add(dateOnly(DateTime.parse(r['day'] as String)));
+      }
+      return out;
+    } catch (_) {
+      return const {};
+    }
+  }
 }

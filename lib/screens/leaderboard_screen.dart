@@ -27,6 +27,8 @@ class LeaderboardScreen extends StatefulWidget {
 }
 
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
+  /// Days the group recovered with its weekly pass — they count as held.
+  Set<DateTime> _recovered = const {};
   List<Profile> _people = const [];
   int? _groupLimit;
   bool _loading = true;
@@ -86,7 +88,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       await HomeWidget.saveWidgetData<String>(
         'group',
         jsonEncode({
-          'streak': limit == null ? 0 : groupStreak(people, limit),
+          'streak': limit == null
+              ? 0
+              : groupStreak(people, limit, recovered: _recovered),
           'limit': limit ?? 0,
         }),
       );
@@ -229,6 +233,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
         if (index == 1) {
           return _GroupCard(
+            recovered: _recovered,
             members: _people,
             limit: _groupLimit,
             onEdit: _editGroupLimit,
@@ -248,11 +253,15 @@ class _GroupCard extends StatelessWidget {
     required this.members,
     required this.limit,
     required this.onEdit,
+    this.recovered = const {},
   });
 
   final List<Profile> members;
   final int? limit;
   final VoidCallback onEdit;
+
+  /// Days the group recovered with its weekly pass.
+  final Set<DateTime> recovered;
 
   @override
   Widget build(BuildContext context) {
@@ -294,7 +303,7 @@ class _GroupCard extends StatelessWidget {
     }
 
     final l = limit!;
-    final streak = groupStreak(members, l);
+    final streak = groupStreak(members, l, recovered: recovered);
     final today = dateOnly(DateTime.now());
     final loggedToday = members.any((m) => m.byDay[today] != null);
     final over = membersOverOn(members, today, l);

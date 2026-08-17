@@ -16,6 +16,9 @@ import 'friend_detail_screen.dart';
 import '../widgets/aurora_header.dart';
 import '../widgets/avatar.dart';
 import '../services/avatar_cache.dart';
+import '../services/notifications.dart';
+import '../data/repository.dart';
+import '../services/screen_time.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -42,6 +45,9 @@ class _GroupsScreenState extends State<GroupsScreen>
   Map<String, int?> _limits = const {};
   String? _pinned;
   List<GroupInvite> _invites = const [];
+  Map<String, Set<DateTime>> _recovered = const {};
+  List<({String id, String groupId, String groupName, String proposedName})>
+      _proposals = const [];
   bool _loading = true;
 
   @override
@@ -83,6 +89,9 @@ class _GroupsScreenState extends State<GroupsScreen>
       final friends = await repo.friends();
       final groups = await repo.groups();
       final invites = await repo.pendingInvites();
+      final proposals = await repo.pendingProposals();
+      final recovered = await repo.groupRecoveredDays();
+      await _announceGroupPasses(repo, recovered);
       final people = {me.id: me, for (final f in friends) f.id: f};
       // Group membership and friendship are separate — fetch anyone in a
       // group we don't already have, or they vanish from the roster.
@@ -105,6 +114,9 @@ class _GroupsScreenState extends State<GroupsScreen>
       setState(() {
         _groups = groups;
         _invites = invites;
+        _proposals = proposals;
+        _recovered = recovered;
+        _recovered = recovered;
         _people = people;
         _limits = limits;
         _pinned = pinned;
@@ -155,7 +167,10 @@ class _GroupsScreenState extends State<GroupsScreen>
         'group',
         jsonEncode({
           'name': g.name,
-          'streak': limit == null ? 0 : groupStreak(members, limit),
+          'streak': limit == null
+              ? 0
+              : groupStreak(members, limit,
+                  recovered: _recovered[g.id] ?? const {}),
           'limit': limit ?? 0,
           'members': members.length,
         }),
@@ -173,6 +188,48 @@ class _GroupsScreenState extends State<GroupsScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Widget now shows ${g.name}')),
     );
+  }
+
+  /// Tell everyone when a group pass gets spent. The trigger picks who pays
+  /// server-side, so each phone just reports what it finds.
+  Future<void> _announceGroupPasses(
+      Repository repo, Map<String, Set<DateTime>> recovered) async {
+    if (recovered.isEmpty) return;
+    final seen = await Prefs.announcedPasses();
+    final fresh = <String>[];
+
+    for (final entry in recovered.entries) {
+      for (final day in entry.value) {
+        final key = entry.key + ':' + ScreenTime.dayKey(day);
+        if (!seen.contains(key)) fresh.add(key);
+      }
+    }
+    if (fresh.isEmpty) return;
+
+    await Prefs.setAnnouncedPasses({...seen, ...fresh});
+    // Only mention it once, however many days were recovered at a time.
+    await Notifications.init();
+    await Notifications.post(
+      9100,
+      'A pass saved the streak',
+      fresh.length == 1
+          ? 'A group pass covered a missed day. Open Undr to see who.'
+          : fresh.length.toString() +
+              ' missed days were covered by group passes.',
+    );
+  }
+
+  Future<void> _decide(String id, bool approve) async {
+    try {
+      await RepoScope.of(context).decideProposal(id, approve);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
+    await _load();
   }
 
   Future<void> _respond(GroupInvite invite, bool accept) async {
@@ -269,10 +326,20 @@ class _GroupsScreenState extends State<GroupsScreen>
                 ? _EmptyGroups(onCreate: _createGroup)
                 : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: _groups.length + _invites.length,
+                itemCount:
+                      _groups.length + _invites.length + _proposals.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) {
-                  if (i < _invites.length) {
+                  if (i < _proposals.length) {
+                    final p = _proposals[i];
+                    return _ProposalCard(
+                      groupName: p.groupName,
+                      personName: p.proposedName,
+                      onApprove: () => _decide(p.id, true),
+                      onReject: () => _decide(p.id, false),
+                    );
+                  }
+                  if (i - _proposals.length < _invites.length) {
                     final inv = _invites[i];
                     return _InviteCard(
                       invite: inv,
@@ -337,6 +404,7 @@ class _GroupsScreenState extends State<GroupsScreen>
                     pinned: _pinned == g.id,
                     onTap: () => _open(g),
                     onPin: () => _pin(g),
+                    recovered: _recovered[g.id] ?? const {},
                     ),
                   );
                 },
@@ -373,6 +441,73 @@ class _GroupsScreenState extends State<GroupsScreen>
               top: false,
         child: _body(context),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Someone a member wants to add. The moderator decides.
+class _ProposalCard extends StatelessWidget {
+  const _ProposalCard({
+    required this.groupName,
+    required this.personName,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final String groupName;
+  final String personName;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.warning, width: 1.3),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Add \$personName to \$groupName?',
+            style: appFont(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: context.cText,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Someone in the group suggested them.',
+            style: appFont(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: context.cTextSec,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                  child: ModernButton(label: 'Add', onPressed: onApprove)),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: onReject,
+                child: Text(
+                  'No',
+                  style: appFont(
+                    fontWeight: FontWeight.w700,
+                    color: context.cTextSec,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -488,6 +623,7 @@ class GroupCard extends StatelessWidget {
     required this.pinned,
     required this.onTap,
     required this.onPin,
+    this.recovered = const {},
   });
 
   final Group group;
@@ -497,10 +633,14 @@ class GroupCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onPin;
 
+  /// Days this group recovered with its weekly pass.
+  final Set<DateTime> recovered;
+
   @override
   Widget build(BuildContext context) {
     final l = limit;
-    final streak = l == null ? 0 : groupStreak(members, l);
+    final streak =
+        l == null ? 0 : groupStreak(members, l, recovered: recovered);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -612,6 +752,8 @@ class GroupDetailScreen extends StatefulWidget {
 }
 
 class _GroupDetailScreenState extends State<GroupDetailScreen> {
+  /// Days this group recovered with its weekly pass.
+  Set<DateTime> _recovered = const {};
   int? _limit;
   bool _loading = true;
 
@@ -619,6 +761,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   void initState() {
     super.initState();
     _limit = widget.group.limitMinutes;
+    RepoScope.of(context).groupRecoveredDays().then((m) {
+      if (mounted) setState(() => _recovered = m[widget.group.id] ?? const {});
+    });
     _loading = false;
   }
 
@@ -664,6 +809,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   Future<void> _addMembers() async {
     final repo = RepoScope.of(context);
+    final me = await repo.me();
+    final isModerator = widget.group.adminId == me.id;
+    if (!mounted) return;
     final friends = await repo.friends();
     if (!mounted) return;
 
@@ -751,7 +899,13 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (!mounted) return;
     try {
       for (final id in picked) {
-        await repo.inviteToGroup(widget.group.id, id);
+        // Only the moderator can invite outright; anyone else proposes
+        // and the moderator decides.
+        if (isModerator) {
+          await repo.inviteToGroup(widget.group.id, id);
+        } else {
+          await repo.proposeForGroup(widget.group.id, id);
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -833,7 +987,8 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   Widget build(BuildContext context) {
     final members = widget.members;
     final l = _limit;
-    final streak = l == null ? 0 : groupStreak(members, l);
+    final streak =
+        l == null ? 0 : groupStreak(members, l, recovered: _recovered);
     final over = l == null
         ? const <Profile>[]
         : membersOverOn(members, dateOnly(DateTime.now()), l);

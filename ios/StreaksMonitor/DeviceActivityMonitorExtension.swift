@@ -34,6 +34,9 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
+        // The overnight watcher shares these callbacks — only the daily
+        // monitor should start or end a day.
+        guard activity.rawValue == "streaks.probe" else { return }
         log("day started")
         // A DeviceActivityEvent fires once per registration, not once per
         // interval — so after a threshold is hit the next day goes unwatched
@@ -100,6 +103,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+        guard activity.rawValue == "streaks.probe" else { return }
         // stopMonitoring() also triggers this callback, so ignore any end that
         // arrives before the day is genuinely over.
         let hour = Calendar.current.component(.hour, from: Date())
@@ -144,6 +148,17 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     override func eventDidReachThreshold(_ event: DeviceActivityEvent.Name,
                                          activity: DeviceActivityName) {
         super.eventDidReachThreshold(event, activity: activity)
+
+        // An hour of use between 2 and 5am is a screen left on, not a
+        // person — flag the day so the app can offer the sleep pass.
+        if event.rawValue == "streaks.overnight.threshold" {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = .current
+            defaults?.set(true, forKey: "sleep_flag_" + f.string(from: Date()))
+            log("overnight use — screen likely left on")
+            return
+        }
 
         // The warning event fires 30 minutes short of the limit.
         if event.rawValue == "streaks.probe.warning" {

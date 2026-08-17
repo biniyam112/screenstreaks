@@ -220,8 +220,8 @@ class _MonitorDot extends StatelessWidget {
     final s = countingSince;
     if (s == null) return '';
     final d = DateTime.now().difference(s);
-    if (d.inMinutes < 60) return 'counting ${d.inMinutes}m';
-    return 'counting ${d.inHours}h';
+    if (d.inMinutes < 60) return 'tracking ${d.inMinutes}m';
+    return 'tracking ${d.inHours}h';
   }
 
   /// Time today that nothing was counted.
@@ -560,8 +560,11 @@ class _StatRow extends StatelessWidget {
       _Stat(IconsaxPlusBold.cup, '${profile.longestStreak}', 'Best', AppColors.info),
       _Stat(IconsaxPlusBold.chart_2, '$rate%', '30d', AppColors.primary),
       if (passesLeft != null)
-        _Stat(IconsaxPlusBold.shield_tick, '$passesLeft', 'Passes',
-            AppColors.warning)
+        _Stat(
+            IconsaxPlusBold.shield_tick,
+            '$passesLeft',
+            passesLeft! < 0 ? 'Owed' : 'Passes',
+            passesLeft! < 0 ? AppColors.danger : AppColors.warning)
       else
         _Stat(IconsaxPlusBold.tick_circle, '${profile.totalMet}', 'Met',
             AppColors.primary),

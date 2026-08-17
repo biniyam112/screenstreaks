@@ -472,4 +472,17 @@ class LocalRepository implements Repository {
 
   @override
   String? get currentEmail => null;
+
+  @override
+  Future<void> proposeForGroup(String groupId, String userId) async {}
+
+  @override
+  Future<List<({String id, String groupId, String groupName, String proposedName})>>
+      pendingProposals() async => const [];
+
+  @override
+  Future<void> decideProposal(String requestId, bool approve) async {}
+
+  @override
+  Future<Map<String, Set<DateTime>>> groupRecoveredDays() async => const {};
 }

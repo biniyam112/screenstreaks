@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/group.dart';
 import '../models/models.dart';
 import 'local_store.dart';
@@ -285,4 +286,20 @@ class OfflineRepository implements Repository {
 
   @override
   String? get currentEmail => _inner.currentEmail;
+
+  @override
+  Future<void> proposeForGroup(String groupId, String userId) =>
+      _inner.proposeForGroup(groupId, userId);
+
+  @override
+  Future<List<({String id, String groupId, String groupName, String proposedName})>>
+      pendingProposals() => _inner.pendingProposals();
+
+  @override
+  Future<void> decideProposal(String requestId, bool approve) =>
+      _inner.decideProposal(requestId, approve);
+
+  @override
+  Future<Map<String, Set<DateTime>>> groupRecoveredDays() =>
+      _inner.groupRecoveredDays();
 }

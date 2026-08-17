@@ -20,8 +20,11 @@ bool _provablyUnder(DailyRecord r, int limit) {
   return used != null && used <= limit;
 }
 
-bool _allUnderOn(List<Profile> members, DateTime day, int limit) {
+bool _allUnderOn(List<Profile> members, DateTime day, int limit,
+    Set<DateTime> recovered) {
   final d = dateOnly(day);
+  // A day the group spent its pass on counts as held.
+  if (recovered.contains(d)) return true;
   for (final m in members) {
     final record = m.byDay[d];
     if (record == null) return false;
@@ -35,7 +38,8 @@ bool _allUnderOn(List<Profile> members, DateTime day, int limit) {
 ///
 /// Today is skipped if nobody has logged it yet, so an unfinished day doesn't
 /// visually break the streak — same rule as [Profile.currentStreak].
-int groupStreak(List<Profile> members, int limit) {
+int groupStreak(List<Profile> members, int limit,
+    {Set<DateTime> recovered = const {}}) {
   if (members.isEmpty || limit <= 0) return 0;
 
   final today = dateOnly(DateTime.now());
@@ -45,7 +49,7 @@ int groupStreak(List<Profile> members, int limit) {
   }
 
   var streak = 0;
-  while (_allUnderOn(members, cursor, limit)) {
+  while (_allUnderOn(members, cursor, limit, recovered)) {
     streak++;
     cursor = cursor.subtract(const Duration(days: 1));
   }

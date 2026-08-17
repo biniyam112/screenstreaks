@@ -138,6 +138,18 @@ enum ScreenTimeProbe {
                     .object(forKey: "monitoring_started") as? Date
                 result(d?.timeIntervalSince1970 ?? 0)
 
+            case "sleepFlags":
+                // Days the overnight watcher saw an hour of use between 2
+                // and 5am — almost certainly a screen left on.
+                let defaults = UserDefaults(suiteName: suite)
+                var days: [String] = []
+                for (key, value) in defaults?.dictionaryRepresentation() ?? [:] {
+                    guard key.hasPrefix("sleep_flag_"),
+                          (value as? Bool) == true else { continue }
+                    days.append(String(key.dropFirst("sleep_flag_".count)))
+                }
+                result(days)
+
             case "overTimes":
                 // When each recent miss crossed the threshold — a crossing
                 // between 2 and 5am is almost certainly a screen left on.
@@ -311,6 +323,30 @@ enum ScreenTimeProbe {
             eventName: activityEvent,
             DeviceActivityEvent.Name("streaks.probe.warning"): warnEvent,
         ])
+
+        // A separate 2–5am watcher. An hour of use in that window is almost
+        // always a video left playing rather than someone awake.
+        let overnight = DeviceActivityName("streaks.overnight")
+        let overnightSchedule = DeviceActivitySchedule(
+            intervalStart: DateComponents(hour: 2, minute: 0),
+            intervalEnd: DateComponents(hour: 5, minute: 0),
+            repeats: true
+        )
+        let overnightEvent = DeviceActivityEvent(
+            applications: selection.applicationTokens,
+            categories: selection.categoryTokens,
+            webDomains: selection.webDomainTokens,
+            threshold: DateComponents(minute: 60)
+        )
+        center.stopMonitoring([overnight])
+        try? center.startMonitoring(
+            overnight,
+            during: overnightSchedule,
+            events: [
+                DeviceActivityEvent.Name("streaks.overnight.threshold"):
+                    overnightEvent,
+            ]
+        )
         let defaults = UserDefaults(suiteName: suite)
         defaults?.set(thresholdMinutes, forKey: "active_limit")
         // Remember when this interval began so a partial first day isn't

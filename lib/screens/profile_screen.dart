@@ -104,11 +104,12 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // A limit change made yesterday takes effect now — the new day's count
       // starts from zero anyway, so nothing is lost by switching here.
       final pending = await Prefs.pendingGoal();
-      final startedAt0 = await ScreenTime.monitoringSince();
+      final queuedOn = await Prefs.pendingGoalSetOn();
       if (pending != null && pending != savedGoal) {
         final now0 = DateTime.now();
-        final midnight0 = DateTime(now0.year, now0.month, now0.day);
-        if (startedAt0 == null || startedAt0.isBefore(midnight0)) {
+        final today0 = DateTime(now0.year, now0.month, now0.day);
+        // Applies only once the day has actually turned over.
+        if (queuedOn != null && today0.isAfter(queuedOn)) {
           // Clear the pending value only once the change has actually
           // landed — otherwise a failed write loses it silently.
           await repo.setDailyLimit(pending);
@@ -122,6 +123,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       final weekAgo = DateTime.now().subtract(const Duration(days: 7));
       final usedThisWeek = spent
           .where((p) => p.groupId == null && p.day.isAfter(weekAgo))
+          .length;
+      // A group pass spent when the personal one was already gone borrows
+      // from next week — shown as -1 until that week comes round.
+      final owed = spent
+          .where((p) => p.kind == 'group_debt' && p.day.isAfter(weekAgo))
           .length;
       final monitoring = await _ensureMonitoring(savedGoal);
       // A monitor that's registered but hasn't woken in days isn't watching
@@ -154,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       if (!mounted) return;
       setState(() {
         _monitoring = monitoring;
-        _passesLeft = (1 - usedThisWeek).clamp(0, 1);
+        _passesLeft = (1 - usedThisWeek - owed).clamp(-1, 1);
         _offSince = offSince;
         _stale = stale;
         _countingSince = countingSince;
@@ -294,8 +300,10 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     if (_askedAboutSleep || !ScreenTime.supported) return;
     _askedAboutSleep = true;
 
-    final overTimes = await ScreenTime.overTimes();
-    if (overTimes.isEmpty) return;
+    // The overnight watcher flags a day directly — an hour of use between
+    // 2 and 5am — rather than us guessing from when the limit was crossed.
+    final flagged = await ScreenTime.sleepFlags();
+    if (flagged.isEmpty) return;
 
     final spent = await repo.spentPasses();
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
@@ -306,9 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     // Most recent qualifying miss that hasn't already been recovered.
     final claimed = spent.map((p) => dateOnly(p.day)).toSet();
     DateTime? candidate;
-    for (final entry in overTimes.entries) {
-      if (!ScreenTime.looksLikeSleep(entry.value)) continue;
-      final day = ScreenTime.parseDay(entry.key);
+    for (final key in flagged) {
+      final day = ScreenTime.parseDay(key);
       if (day == null || claimed.contains(dateOnly(day))) continue;
       final record = me.byDay[dateOnly(day)];
       if (record == null || record.limitMet || record.partial) continue;
@@ -316,9 +323,6 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     }
     if (candidate == null || !mounted) return;
 
-    final at = overTimes[ScreenTime.dayKey(candidate)]!;
-    final hh = at.hour.toString().padLeft(2, '0');
-    final mm = at.minute.toString().padLeft(2, '0');
 
     final claim = await showDialog<bool>(
       context: context,
@@ -327,8 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         title: Text('Screen left on?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
-          'You went over at ' + hh + ':' + mm + ', which usually means a video kept '
-          'playing or the screen never locked. Claim your sleep pass to '
+          'Your phone was in use for over an hour between 2 and 5am, which '
+          'usually means a video kept playing or the screen never locked. '
+          'Claim your sleep pass to '
           "recover that day — one a week, separate from your normal pass.",
           style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
         ),

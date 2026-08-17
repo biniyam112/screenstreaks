@@ -12,7 +12,6 @@ import 'screens/profile_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'services/prefs.dart';
 import 'theme_provider.dart';
-import 'screens/probe_screen.dart';
 import 'screens/social_screen.dart';
 
 /// Exposes sign-out to descendant screens (e.g. SettingsScreen).
@@ -192,7 +191,6 @@ class _RootShellState extends State<RootShell> {
       ),
       const FeedScreen(),
       const SocialScreen(),
-      const ProbeScreen(),
     ];
 
     return Scaffold(
@@ -214,7 +212,6 @@ class _RootShellState extends State<RootShell> {
             _navItem(context, IconsaxPlusBold.flash_1, 'My streak', AppColors.accent),
             _navItem(context, IconsaxPlusBold.heart, 'Feed', const Color(0xFFEC4899)),
             _navItem(context, IconsaxPlusBold.people, 'Social', AppColors.primary),
-            _navItem(context, IconsaxPlusBold.code_1, 'Probe', AppColors.danger),
           ],
         ),
       ),

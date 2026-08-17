@@ -113,3 +113,8 @@ flutter_launcher_icons:
   ios: true
   android: false
   remove_alpha_ios: true
+
+dependency_overrides:
+  # 6.2.5 opens the sign-in sheet and immediately reports 'canceled' with no
+  # account picker. 6.3.0 is pinned out by google_sign_in 7.2.0.
+  google_sign_in_ios: ^6.3.0
