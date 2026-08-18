@@ -56,6 +56,35 @@ int groupStreak(List<Profile> members, int limit,
   return streak;
 }
 
+/// The longest stretch the group ever held together. Walks back from today
+/// to the earliest day anyone has a record for.
+int bestGroupStreak(List<Profile> members, int limit,
+    [Set<DateTime> recovered = const {}]) {
+  if (members.isEmpty || limit <= 0) return 0;
+
+  final days = <DateTime>[
+    for (final m in members)
+      for (final r in m.records) dateOnly(r.day),
+  ];
+  if (days.isEmpty) return 0;
+  days.sort();
+
+  var best = 0;
+  var run = 0;
+  var cursor = days.first;
+  final today = dateOnly(DateTime.now());
+  while (!cursor.isAfter(today)) {
+    if (_allUnderOn(members, cursor, limit, recovered)) {
+      run++;
+      if (run > best) best = run;
+    } else {
+      run = 0;
+    }
+    cursor = cursor.add(const Duration(days: 1));
+  }
+  return best;
+}
+
 /// Who broke the streak most recently — useful for "Leo went over yesterday".
 List<Profile> membersOverOn(List<Profile> members, DateTime day, int limit) {
   final d = dateOnly(day);

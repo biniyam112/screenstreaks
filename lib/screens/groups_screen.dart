@@ -19,6 +19,7 @@ import '../services/avatar_cache.dart';
 import '../services/notifications.dart';
 import '../data/repository.dart';
 import '../services/screen_time.dart';
+import 'group_history_screen.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -1036,7 +1037,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ? const Center(child: CircularProgressIndicator())
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                itemCount: members.length + 1,
+                itemCount: members.length + 2,
                 separatorBuilder: (_, i) => SizedBox(height: i == 0 ? 18 : 10),
                 itemBuilder: (context, i) {
                   if (i == 0) {
@@ -1047,7 +1048,28 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                       onSet: _editLimit,
                     );
                   }
-                  return _MemberRow(person: members[i - 1], rank: i);
+                  if (i <= members.length) {
+                    return _MemberRow(person: members[i - 1], rank: i);
+                  }
+                  // The group's own history, one tap away — the roster is
+                  // what this screen is for.
+                  return _GroupHistoryRow(
+                    members: members,
+                    limit: l,
+                    recovered: _recovered,
+                    onTap: l == null
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => GroupHistoryScreen(
+                                  groupName: widget.group.name,
+                                  members: members,
+                                  limit: l,
+                                  recovered: _recovered,
+                                ),
+                              ),
+                            ),
+                  );
                 },
               ),
             ),
@@ -1055,6 +1077,112 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Compact strip of recent group days, opening the full history.
+class _GroupHistoryRow extends StatelessWidget {
+  const _GroupHistoryRow({
+    required this.members,
+    required this.limit,
+    required this.recovered,
+    this.onTap,
+  });
+
+  final List<Profile> members;
+  final int? limit;
+  final Set<DateTime> recovered;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = limit;
+    final today = dateOnly(DateTime.now());
+    final best = l == null ? 0 : bestGroupStreak(members, l, recovered);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.cSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.cDivider),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 84,
+              child: Row(
+                children: [
+                  for (var i = 13; i >= 0; i--) ...[
+                    Expanded(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(2),
+                            color: _colorFor(
+                                context, today.subtract(Duration(days: i)), l),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (i > 0) const SizedBox(width: 2),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Group history',
+                    style: appFont(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: context.cText,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l == null ? 'Set a limit to start' : 'Best $best days',
+                    style: appFont(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: context.cTextSec,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(IconsaxPlusLinear.arrow_right_3,
+                size: 16, color: context.cTextTer),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _colorFor(BuildContext context, DateTime day, int? l) {
+    if (l == null) return context.cDivider.withValues(alpha: 0.4);
+    final d = dateOnly(day);
+    if (recovered.contains(d)) return AppColors.primary.withValues(alpha: 0.85);
+
+    var any = false;
+    for (final m in members) {
+      final r = m.byDay[d];
+      if (r == null || r.partial) return context.cDivider.withValues(alpha: 0.5);
+      any = true;
+      if (!(r.limitMet && r.limitMinutes <= l)) {
+        return AppColors.danger.withValues(alpha: 0.75);
+      }
+    }
+    return any
+        ? AppColors.primary.withValues(alpha: 0.85)
+        : context.cDivider.withValues(alpha: 0.5);
   }
 }
 

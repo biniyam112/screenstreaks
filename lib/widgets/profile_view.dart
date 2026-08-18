@@ -257,9 +257,7 @@ class _MonitorDot extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: live ? null : onTap,
               child: Text(
-                !live
-                    ? 'Not tracking'
-                    : (partialToday ? _countingFor : 'Tracking'),
+                live ? 'Tracking' : 'Not tracking',
                 style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
