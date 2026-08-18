@@ -149,11 +149,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final (title, body) = switch (record) {
       null => (
-          'Nothing recorded',
-          "Tracking wasn't running, or this day is before you joined.",
+          'No data',
+          'Nothing was recorded for this day — it may be before you started '
+              'using Undr.',
         ),
       final r when r.partial => (
-          'Not judged',
+          'Tracking was off',
           "Tracking didn't cover the whole day, so we can't say either way. "
               'It counts neither for nor against your streak. If it should '
               'have been a good day, you can spend a pass on it.',
