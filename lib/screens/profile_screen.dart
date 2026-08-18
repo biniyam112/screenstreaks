@@ -21,6 +21,7 @@ import 'history_screen.dart';
 import '../widgets/aurora_header.dart';
 import '../widgets/avatar.dart';
 import '../widgets/name_prompt.dart';
+import '../services/notifications.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -82,6 +83,10 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _load();
+    // Leaving the app is when we know what's still stuck on this phone.
+    if (state == AppLifecycleState.paused) {
+      Notifications.init().then((_) => Notifications.scheduleUnsyncedNudge());
+    }
   }
 
   Future<void> _load() async {

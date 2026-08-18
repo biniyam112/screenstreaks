@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+import 'screen_time.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'prefs.dart';
@@ -23,6 +26,8 @@ class Notifications {
   static const _idLimit = 3;
 
   static Future<void> init() async {
+    // zonedSchedule needs the local zone set up before it can be used.
+    tz_data.initializeTimeZones();
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     // Ask separately via requestPermission so the prompt appears when the
     // user turns alerts on, rather than at launch.
@@ -118,6 +123,39 @@ class Notifications {
         "You've used half of your ${formatDuration(goalMinutes)} screen-time goal.",
       );
       await Prefs.markFired(half: true);
+    }
+  }
+
+  /// Reminds someone to open the app when yesterday's result is still stuck
+  /// on their phone. Background sync usually handles this, but iOS only
+  /// schedules it for people who open the app often — which isn't the people
+  /// who need it.
+  static const _nudgeId = 9200;
+
+  static Future<void> scheduleUnsyncedNudge() async {
+    await _instance.cancel(id: _nudgeId);
+    final pending = await ScreenTime.pendingOutcomes();
+    if (pending.isEmpty) return;
+
+    // Late morning, so it lands after they've woken but before the day runs on.
+    final now = DateTime.now();
+    var when = DateTime(now.year, now.month, now.day, 11);
+    if (!when.isAfter(now)) when = when.add(const Duration(days: 1));
+
+    try {
+      await _instance.zonedSchedule(
+        id: _nudgeId,
+        title: 'Your streak is waiting',
+        body: "Open Undr so yesterday's result reaches your group.",
+        scheduledDate: tz.TZDateTime.from(when, tz.local),
+        notificationDetails: const NotificationDetails(
+          iOS: DarwinNotificationDetails(),
+          android: AndroidNotificationDetails(_channelId, _channelName),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (_) {
+      // Scheduling is best effort.
     }
   }
 }

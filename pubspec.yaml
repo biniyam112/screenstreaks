@@ -46,6 +46,7 @@ dependencies:
   image_picker: ^1.2.3
   crypto: ^3.0.7
   http: ^1.6.0
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:

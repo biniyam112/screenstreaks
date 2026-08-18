@@ -224,6 +224,16 @@ class _MonitorDot extends StatelessWidget {
     return 'tracking ${d.inHours}h';
   }
 
+  /// How long the current interval has been registered. Not the same as
+  /// usage — iOS never tells us that.
+  String get _trackingFor {
+    final s = countingSince;
+    if (s == null) return 'Tracking';
+    final d = DateTime.now().difference(s);
+    if (d.inMinutes < 60) return 'tracking ' + d.inMinutes.toString() + 'm';
+    return 'tracking ' + d.inHours.toString() + 'h';
+  }
+
   /// Time today that nothing was counted.
   String get _offFor {
     final d = offSince;
@@ -257,7 +267,9 @@ class _MonitorDot extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: live ? null : onTap,
               child: Text(
-                live ? 'Tracking' : 'Not tracking',
+                !live
+                    ? 'Not tracking'
+                    : (countingSince == null ? 'Tracking' : _trackingFor),
                 style: appFont(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
