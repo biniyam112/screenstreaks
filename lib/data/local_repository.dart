@@ -485,4 +485,7 @@ class LocalRepository implements Repository {
 
   @override
   Future<Map<String, Set<DateTime>>> groupRecoveredDays() async => const {};
+
+  @override
+  Future<void> renameGroup(String groupId, String name) async {}
 }

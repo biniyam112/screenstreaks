@@ -302,4 +302,8 @@ class OfflineRepository implements Repository {
   @override
   Future<Map<String, Set<DateTime>>> groupRecoveredDays() =>
       _inner.groupRecoveredDays();
+
+  @override
+  Future<void> renameGroup(String groupId, String name) =>
+      _inner.renameGroup(groupId, name);
 }

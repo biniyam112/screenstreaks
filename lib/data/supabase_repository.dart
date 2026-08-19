@@ -578,7 +578,7 @@ class SupabaseRepository implements Repository {
     if (userId == null) throw Exception('Not signed in');
 
     // Folder must be the user id — the storage policy checks it.
-    final path = '\$userId/avatar.\$ext';
+    final path = userId + '/avatar.' + ext;
     await _supabase.storage.from('Avatars').uploadBinary(
           path,
           Uint8List.fromList(bytes),
@@ -704,5 +704,10 @@ class SupabaseRepository implements Repository {
     } catch (_) {
       return const {};
     }
+  }
+
+  @override
+  Future<void> renameGroup(String groupId, String name) async {
+    await _supabase.from('groups').update({'name': name}).eq('id', groupId);
   }
 }

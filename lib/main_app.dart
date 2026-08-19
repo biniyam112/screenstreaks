@@ -141,7 +141,7 @@ class _OnboardingGateState extends State<_OnboardingGate> {
     if (!mounted) return;
     try {
       final me = await RepoScope.of(context).me();
-      final done = (me.firstName ?? '').trim().isNotEmpty;
+      final done = (me.displayName ?? '').trim().isNotEmpty;
       if (done) await Prefs.setOnboarded(true);
       if (mounted) setState(() => _onboarded = done);
       return;

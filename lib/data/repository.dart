@@ -81,6 +81,10 @@ abstract class Repository {
   Future<void> deleteGroup(String groupId) =>
       throw UnimplementedError('Groups not supported by this backend');
 
+  /// Rename a group you administer.
+  Future<void> renameGroup(String groupId, String name) =>
+      throw UnimplementedError('Groups not supported by this backend');
+
   /// Set the shared limit. Admin only.
   Future<void> setGroupLimit(String groupId, int minutes) =>
       throw UnimplementedError('Groups not supported by this backend');

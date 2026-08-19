@@ -114,8 +114,12 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         // Only claim a pass for a day we watched from the beginning. If
         // monitoring started mid-day we never saw the earlier hours, so the
         // absence of a threshold proves nothing.
+        // Covered the whole day if counting began at or before midnight.
+        // The midnight re-arm stamps startOfDay, so a normal day passes;
+        // only a genuine mid-day start is partial.
+        let dayStart = Calendar.current.startOfDay(for: Date())
         if let started = defaults?.object(forKey: "monitoring_started") as? Date,
-           !Calendar.current.isDate(started, inSameDayAs: Date()) {
+           started <= dayStart {
             let lost = defaults?.stringArray(forKey: "lost_days") ?? []
             let pending = defaults?.dictionary(forKey: "pending_outcomes")
                 as? [String: Bool] ?? [:]

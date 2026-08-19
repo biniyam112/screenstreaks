@@ -22,6 +22,7 @@ import '../widgets/aurora_header.dart';
 import '../widgets/avatar.dart';
 import '../widgets/name_prompt.dart';
 import '../services/notifications.dart';
+import 'needs_you_screen.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -45,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   bool _stale = false;
   bool _askedToResume = false;
   bool _askedAboutSleep = false;
+  int _needsYou = 0;
   DateTime? _countingSince;
   ({int state, DateTime? warnedAt, DateTime? overAt}) _dayState =
       (state: 0, warnedAt: null, overAt: null);
@@ -142,6 +144,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // time later than midnight means today is only partly measured.
       final countingSince = await ScreenTime.monitoringSince();
       final dayState = await ScreenTime.dayState();
+      // Anything waiting on the user, counted for the bell.
+      var needsYou = 0;
+      try {
+        needsYou = (await repo.pendingInvites()).length +
+            (await repo.pendingProposals()).length;
+      } catch (_) {
+        // The badge is cosmetic; never let it break the load.
+      }
       // Keep the session log honest: open one when tracking is live, close it
       // when we find it stopped without being told.
       final sessions = await repo.monitoringSessions();
@@ -170,6 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         _stale = stale;
         _countingSince = countingSince;
         _dayState = dayState;
+        _needsYou = needsYou;
         _me = me.dailyLimitMinutes == savedGoal
             ? me
             : me.copyWith(dailyLimitMinutes: savedGoal);
@@ -546,9 +557,61 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
             tint: const Color(0xFF9B7FE8),
             trailing: _me == null
                 ? null
-                : GestureDetector(
-                    onTap: widget.onProfile,
-                    child: Avatar(profile: _me!, size: 34),
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const NeedsYouScreen(),
+                            ),
+                          );
+                          if (mounted) _load();
+                        },
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 34,
+                              height: 34,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: context.cSurface,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(IconsaxPlusLinear.notification,
+                                  size: 17, color: context.cTextSec),
+                            ),
+                            if (_needsYou > 0)
+                              Positioned(
+                                top: -1,
+                                right: -1,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.danger,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    _needsYou.toString(),
+                                    style: appFont(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: widget.onProfile,
+                        child: Avatar(profile: _me!, size: 34),
+                      ),
+                    ],
                   ),
           ),
           Expanded(

@@ -103,10 +103,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   bool get _hasName =>
-      _firstController.text.trim().isNotEmpty &&
-      _lastController.text.trim().isNotEmpty;
+      _firstController.text.trim().isNotEmpty;
 
   Future<void> _finish() async {
+    if (!_hasName) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter at least a first name.')),
+      );
+      return;
+    }
+
     final first = _firstController.text.trim();
     final last = _lastController.text.trim();
     final nick = _nicknameController.text.trim();
@@ -122,9 +128,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           lastName: last,
           nickname: nick,
         );
-      } else if (name.isNotEmpty) {
-        await repo.setDisplayName(name);
       }
+      await repo.setDisplayName(name.isNotEmpty ? name : first);
       await Prefs.setOnboarded(true);
       notifyProfileChanged();
       if (!mounted) return;

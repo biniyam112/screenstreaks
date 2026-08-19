@@ -919,6 +919,52 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     Navigator.of(context).pop();
   }
 
+  /// Admin only — the update policy on groups enforces it server-side too.
+  Future<void> _rename() async {
+    final controller = TextEditingController(text: widget.group.name);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        backgroundColor: c.cSurface,
+        title: Text('Rename group',
+            style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 30,
+          textCapitalization: TextCapitalization.words,
+          style: appFont(fontWeight: FontWeight.w600, color: c.cText),
+          decoration: const InputDecoration(counterText: ''),
+          onSubmitted: (v) => Navigator.pop(c, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text('Cancel',
+                style: appFont(
+                    color: c.cTextSec, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, controller.text.trim()),
+            child: Text('Save',
+                style: appFont(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      await RepoScope.of(context).renameGroup(widget.group.id, name);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   Future<void> _editLimit() async {
     final floor = minGroupLimit(widget.members);
     var value = _limit ?? (floor + 30);
@@ -1008,10 +1054,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               ),
               onSelected: (v) {
                 if (v == 'limit') _editLimit();
+                if (v == 'rename') _rename();
                 if (v == 'add') _addMembers();
                 if (v == 'leave') _leave();
               },
               itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'rename',
+                  child: Text('Rename group',
+                      style: appFont(color: context.cText)),
+                ),
                 PopupMenuItem(
                   value: 'limit',
                   child: Text(l == null ? 'Set limit' : 'Change limit',
@@ -1049,7 +1101,11 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                     );
                   }
                   if (i <= members.length) {
-                    return _MemberRow(person: members[i - 1], rank: i);
+                    return _MemberRow(
+                      person: members[i - 1],
+                      rank: i,
+                      isAdmin: members[i - 1].id == widget.group.adminId,
+                    );
                   }
                   // The group's own history, one tap away — the roster is
                   // what this screen is for.
@@ -1311,10 +1367,17 @@ class _Banner extends StatelessWidget {
 }
 
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.person, required this.rank});
+  const _MemberRow({
+    required this.person,
+    required this.rank,
+    this.isAdmin = false,
+  });
 
   final Profile person;
   final int rank;
+
+  /// Whoever created the group — they set the limit and approve members.
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -1369,7 +1432,8 @@ class _MemberRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Limit ${fmtLimit(person.dailyLimitMinutes)} · '
-                    'best ${person.longestStreak}',
+                    'best ${person.longestStreak}'
+                    '${isAdmin ? ' · admin' : ''}',
                     style: appFont(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w500,
