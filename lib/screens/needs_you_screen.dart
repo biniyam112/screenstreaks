@@ -42,7 +42,7 @@ class _NeedsYouScreenState extends State<NeedsYouScreen> {
         final me = await repo.me();
         final spent = await repo.spentPasses();
         final claimed = spent.map((p) => dateOnly(p.day)).toSet();
-        final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+        final weekAgo = startOfWeek();
         final usedSleep =
             spent.any((p) => p.kind == 'sleep' && p.day.isAfter(weekAgo));
 

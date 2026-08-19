@@ -127,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       }
       // One personal pass a week.
       final spent = await repo.spentPasses();
-      final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+      final weekAgo = startOfWeek();
       final usedThisWeek = spent
           .where((p) => p.groupId == null && p.day.isAfter(weekAgo))
           .length;

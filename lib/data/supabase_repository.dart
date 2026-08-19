@@ -483,7 +483,7 @@ class SupabaseRepository implements Repository {
     final now = DateTime.now();
     // Personal: one a week. Group: one a month, per group.
     final since = groupId == null
-        ? now.subtract(const Duration(days: 7))
+        ? startOfWeek(now)
         : DateTime(now.year, now.month, 1);
 
     var q = _supabase

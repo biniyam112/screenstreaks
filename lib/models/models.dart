@@ -137,6 +137,14 @@ enum DayStatus { met, missed, none }
 /// Normalise a DateTime to midnight (date only).
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
+/// Monday of the current week. Passes reset here rather than on a rolling
+/// seven days, so "one a week, resets Monday" is something people can plan
+/// around — and it matches what the database checks.
+DateTime startOfWeek([DateTime? now]) {
+  final d = dateOnly(now ?? DateTime.now());
+  return d.subtract(Duration(days: d.weekday - 1));
+}
+
 /// One day's record.
 class DailyRecord {
   DailyRecord({
