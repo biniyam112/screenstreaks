@@ -66,6 +66,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<!-- Required when UIBackgroundModes includes 'processing'. -->
+		<string>be.tramckrijte.workmanager.BackgroundFetchTask</string>
+		<string>be.tramckrijte.workmanager.BackgroundProcessingTask</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
