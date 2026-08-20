@@ -231,6 +231,16 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       }
       final active = await ScreenTime.activeLimit();
       if (active == goalMinutes) return true;
+
+      // Don't hammer it. If a restart doesn't take — which has happened —
+      // retrying on every screen load produces a burst of registrations and
+      // can fire the threshold spuriously.
+      final lastTry = await Prefs.lastMonitorRestart();
+      if (lastTry != null &&
+          DateTime.now().difference(lastTry) < const Duration(minutes: 10)) {
+        return active > 0;
+      }
+      await Prefs.setLastMonitorRestart(DateTime.now());
       // Covers a fresh install too: the selection is restored above, so this
       // silently puts monitoring back rather than waiting for a manual tap.
       return await ScreenTime.startMonitoring(goalMinutes);

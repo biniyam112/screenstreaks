@@ -8,6 +8,7 @@ import '../widgets.dart';
 import '../widgets/profile_view.dart';
 import '../widgets/streak_compare.dart';
 import 'history_screen.dart';
+import '../widgets/avatar.dart';
 
 /// A friend's full profile: their limit, weekly strip, progress grid, and a
 /// side-by-side day-by-day comparison against you.
@@ -68,7 +69,14 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   Widget build(BuildContext context) {
     final ready = _friend != null && _me != null;
     return Scaffold(
-      appBar: AppBar(title: Text(_friend?.displayName ?? 'Friend')),
+      appBar: AppBar(
+        title: Text(_friend?.displayName ?? 'Friend'),
+        actions: [
+          // Mirrors your own page, where your avatar sits top right.
+          if (_friend != null) Avatar(profile: _friend!, size: 32),
+          const SizedBox(width: 16),
+        ],
+      ),
       body: SafeArea(
         child: !ready
             ? const Center(child: CircularProgressIndicator())

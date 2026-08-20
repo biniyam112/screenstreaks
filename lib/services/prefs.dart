@@ -67,6 +67,18 @@ class Prefs {
           // Keep it bounded — old entries can't be re-announced anyway.
           .setStringList('announced_passes', keys.toList().take(200).toList());
 
+  /// When monitoring was last re-registered, so a failing restart can't
+  /// loop on every screen load.
+  static Future<DateTime?> lastMonitorRestart() async {
+    final ms = (await SharedPreferences.getInstance())
+        .getInt('last_monitor_restart');
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  static Future<void> setLastMonitorRestart(DateTime when) async =>
+      (await SharedPreferences.getInstance())
+          .setInt('last_monitor_restart', when.millisecondsSinceEpoch);
+
   /// Which account the running monitor belongs to. Counting against one
   /// person's limit and apps means nothing for anyone else.
   static Future<String?> monitorOwner() async =>
