@@ -61,6 +61,15 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         }
         guard minutes > 0 else { return }
 
+        // A selection chosen yesterday takes effect now, for the same
+        // reason the limit does — the new day's count starts from zero
+        // anyway, so nothing is lost by switching here.
+        if let queued = defaults.data(forKey: "pending_selection") {
+            defaults.set(queued, forKey: "selection")
+            defaults.removeObject(forKey: "pending_selection")
+            log("selection changed")
+        }
+
         var selection = FamilyActivitySelection()
         if let data = defaults.data(forKey: "selection"),
            let decoded = try? JSONDecoder().decode(FamilyActivitySelection.self,

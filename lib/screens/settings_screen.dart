@@ -230,8 +230,37 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _pickApps() async {
     await ScreenTime.requestAuthorization();
-    await ScreenTime.pickApps();
+    final outcome = await ScreenTime.pickAppsDetailed();
     await _refreshScreenTime();
+    if (!mounted) return;
+
+    // Changing what's watched mid-day would restart the count from zero, so
+    // it waits for midnight — say so, or the old selection looks like the
+    // change didn't save.
+    if (outcome.deferred) {
+      await showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          backgroundColor: c.cSurface,
+          title: Text('Starts tomorrow',
+              style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+          content: Text(
+            "Today's count is already running against your current apps, so "
+            'changing them now would wipe it. Your new selection takes effect '
+            'at midnight.',
+            style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: Text('Got it',
+                  style: appFont(
+                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> _startTracking() async {

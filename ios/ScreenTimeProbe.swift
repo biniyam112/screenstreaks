@@ -83,22 +83,27 @@ enum ScreenTimeProbe {
                     .decode(FamilyActivitySelection.self, from: saved) {
                     current = decoded
                 }
+                // Changing what's watched mid-day would restart the count
+                // from zero, which is a way out of a day going badly. If
+                // monitoring is already running, queue it for midnight.
+                let running = (UserDefaults(suiteName: suite)?
+                    .integer(forKey: "active_limit") ?? 0) > 0
+
                 let picker = AppPickerView(initial: current) { selection in
                     if let data = try? JSONEncoder().encode(selection) {
-                        UserDefaults(suiteName: suite)?.set(data, forKey: "selection")
-                        // Also keep a copy outside the app group — installs wipe
-                        // the shared container but not the app's own defaults.
-                        UserDefaults.standard.set(data, forKey: "selection_backup")
+                        let key = running ? "pending_selection" : "selection"
+                        UserDefaults(suiteName: suite)?.set(data, forKey: key)
+                        if !running {
+                            // Installs wipe the shared container but not the
+                            // app's own defaults.
+                            UserDefaults.standard.set(data, forKey: "selection_backup")
+                        }
                     }
                     host.dismiss(animated: true)
                     let apps = selection.applicationTokens.count
                     let cats = selection.categoryTokens.count
-                    // Category-only selections frequently fail to trigger
-                    // thresholds — flag it so the UI can nudge the user.
-                    let warn = (apps == 0 && cats > 0)
-                        ? " — pick individual apps too, categories alone may not count"
-                        : ""
-                    result("\(apps) apps, \(cats) categories\(warn)")
+                    let when = running ? " — starts tomorrow" : ""
+                    result("\(apps) apps, \(cats) categories\(when)")
                 }
                 host.present(UIHostingController(rootView: picker), animated: true)
 

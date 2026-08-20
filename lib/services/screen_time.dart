@@ -24,14 +24,22 @@ class ScreenTime {
   /// Opens Apple's picker. Returns the number of individual apps chosen —
   /// categories alone don't reliably trigger thresholds, so a zero here
   /// means tracking won't work and the caller should say so.
-  static Future<int> pickApps() async {
-    if (!supported) return 0;
+  static Future<int> pickApps() async => (await pickAppsDetailed()).apps;
+
+  /// [deferred] is true when monitoring was already running, so the new
+  /// selection waits for midnight rather than restarting today's count.
+  static Future<({int apps, bool deferred})> pickAppsDetailed() async {
+    if (!supported) return (apps: 0, deferred: false);
     try {
       final result = await _channel.invokeMethod('pickApps');
-      final match = RegExp(r'^(\d+) apps').firstMatch('$result');
-      return int.tryParse(match?.group(1) ?? '') ?? 0;
+      final text = '$result';
+      final match = RegExp(r'^(\d+) apps').firstMatch(text);
+      return (
+        apps: int.tryParse(match?.group(1) ?? '') ?? 0,
+        deferred: text.contains('starts tomorrow'),
+      );
     } on PlatformException {
-      return 0;
+      return (apps: 0, deferred: false);
     }
   }
 
