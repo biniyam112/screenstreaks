@@ -117,6 +117,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       );
       if (ok != true || !mounted) return;
       await Prefs.setPendingGoal(m);
+      // The extension applies this at midnight, so the new limit is live
+      // from the start of the day rather than when the app next opens.
+      await ScreenTime.setPendingLimit(m);
       setState(() {
         _pendingGoal = m;
         _goal = _savedGoal;

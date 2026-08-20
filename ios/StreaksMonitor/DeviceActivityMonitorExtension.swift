@@ -47,7 +47,18 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     /// Re-register the threshold event for the interval that just began.
     private func rearm() {
         guard let defaults = defaults else { return }
-        let minutes = defaults.integer(forKey: "active_limit")
+
+        // A limit change queued yesterday takes effect now — this is the
+        // actual start of the new day, rather than whenever the app is next
+        // opened. Clearing it here is what tells Dart it has landed.
+        var minutes = defaults.integer(forKey: "active_limit")
+        let queued = defaults.integer(forKey: "pending_limit")
+        if queued > 0 && queued != minutes {
+            minutes = queued
+            defaults.set(queued, forKey: "active_limit")
+            defaults.removeObject(forKey: "pending_limit")
+            log("limit changed to \(queued)m")
+        }
         guard minutes > 0 else { return }
 
         var selection = FamilyActivitySelection()

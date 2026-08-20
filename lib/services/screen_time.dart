@@ -272,4 +272,30 @@ class ScreenTime {
       return const [];
     }
   }
+
+  /// Queue a limit for the extension to apply at the next midnight.
+  static Future<void> setPendingLimit(int? minutes) async {
+    if (!supported) return;
+    try {
+      await _channel.invokeMethod('setPendingLimit', minutes ?? 0);
+    } on PlatformException {
+      // The app applies it on next load as a fallback.
+    }
+  }
+
+  /// How many apps and categories are being watched. Shown to friends so a
+  /// selection of one app is visible rather than hidden.
+  static Future<({int apps, int categories})> selectionCount() async {
+    if (!supported) return (apps: 0, categories: 0);
+    try {
+      final raw = await _channel.invokeMethod('selectionCount');
+      if (raw is! Map) return (apps: 0, categories: 0);
+      return (
+        apps: (raw['apps'] as num?)?.toInt() ?? 0,
+        categories: (raw['categories'] as num?)?.toInt() ?? 0,
+      );
+    } on PlatformException {
+      return (apps: 0, categories: 0);
+    }
+  }
 }

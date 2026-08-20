@@ -20,6 +20,7 @@ import '../services/notifications.dart';
 import '../data/repository.dart';
 import '../services/screen_time.dart';
 import 'group_history_screen.dart';
+import '../services/widget_push.dart';
 
 String fmtLimit(int m) {
   final h = m ~/ 60, r = m % 60;
@@ -138,46 +139,8 @@ class _GroupsScreenState extends State<GroupsScreen>
   }
 
   Future<void> _pushWidget() async {
-    final id = _pinned;
-    if (id == null) return;
-    Group? g;
-    for (final x in _groups) {
-      if (x.id == id) g = x;
-    }
-    if (g == null) return;
-    try {
-      final members = membersOf(g);
-      final limit = _limits[id];
-      // Photos have to live on disk for the widget to draw them.
-      final photos = await AvatarCache.cache(members.take(6).toList());
-      await HomeWidget.setAppGroupId('group.com.screenstreaks.screenstreaks');
-      await HomeWidget.saveWidgetData<String>(
-        'leaderboard',
-        jsonEncode(members
-            .take(6)
-            .map((p) => {
-                  'name': p.shortLabel,
-                  'streak': p.currentStreak,
-                  'isMe': p.isMe,
-                  'limit': p.dailyLimitMinutes,
-                  'photo': photos[p.id],
-                })
-            .toList()),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        'group',
-        jsonEncode({
-          'name': g.name,
-          'streak': limit == null
-              ? 0
-              : groupStreak(members, limit,
-                  recovered: _recovered[g.id] ?? const {}),
-          'limit': limit ?? 0,
-          'members': members.length,
-        }),
-      );
-      await HomeWidget.updateWidget(iOSName: 'StreaksWidget');
-    } catch (_) {}
+    if (!mounted) return;
+    await WidgetPush.push(RepoScope.of(context));
   }
 
   Future<void> _pin(Group g) async {
@@ -1433,10 +1396,15 @@ class _MemberRow extends StatelessWidget {
                   Text(
                     'Limit ${fmtLimit(person.dailyLimitMinutes)} · '
                     'best ${person.longestStreak}'
-                    '${isAdmin ? ' · admin' : ''}',
+                    '${isAdmin ? ' · admin' : ''}'
+                    '${person.trackedApps == null ? '' : ' · '
+                        '${person.trackedApps! + person.trackedCategories!} '
+                        'tracked'}',
                     style: appFont(
                       fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: person.thinSelection
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: context.cTextSec,
                     ),
                   ),

@@ -306,4 +306,8 @@ class OfflineRepository implements Repository {
   @override
   Future<void> renameGroup(String groupId, String name) =>
       _inner.renameGroup(groupId, name);
+
+  @override
+  Future<void> setTrackedCounts(int apps, int categories) =>
+      _inner.setTrackedCounts(apps, categories);
 }

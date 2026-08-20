@@ -23,6 +23,8 @@ import '../widgets/avatar.dart';
 import '../widgets/name_prompt.dart';
 import '../services/notifications.dart';
 import 'needs_you_screen.dart';
+import '../services/widget_push.dart';
+import '../widgets/app_background.dart';
 
 /// The user's home page: streak, weekly chart, today check-in, share, friends.
 class ProfileScreen extends StatefulWidget {
@@ -116,7 +118,11 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
         final now0 = DateTime.now();
         final today0 = DateTime(now0.year, now0.month, now0.day);
         // Applies only once the day has actually turned over.
-        if (queuedOn != null && today0.isAfter(queuedOn)) {
+        // The extension may already have applied it at midnight — in which
+        // case activeLimit is the new value and we just catch up.
+        final activeNow = await ScreenTime.activeLimit();
+        if (activeNow == pending ||
+            (queuedOn != null && today0.isAfter(queuedOn))) {
           // Clear the pending value only once the change has actually
           // landed — otherwise a failed write loses it silently.
           await repo.setDailyLimit(pending);
@@ -144,6 +150,14 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       // time later than midnight means today is only partly measured.
       final countingSince = await ScreenTime.monitoringSince();
       final dayState = await ScreenTime.dayState();
+      // Publish what we're watching so friends can see thin coverage.
+      if (ScreenTime.supported) {
+        final counts = await ScreenTime.selectionCount();
+        if (counts.apps != me.trackedApps ||
+            counts.categories != me.trackedCategories) {
+          await repo.setTrackedCounts(counts.apps, counts.categories);
+        }
+      }
       // Anything waiting on the user, counted for the bell.
       var needsYou = 0;
       try {
@@ -189,6 +203,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       });
       // Keep the home-screen widget in sync with the latest week/streak.
       HomeWidgetService.update(me);
+      // Keeps the widget's limits current without waiting for a visit to
+      // the Social tab.
+      if (mounted) WidgetPush.push(repo);
 
       // Accounts made before these fields existed have no first name — ask
       // once so lists and the widget have something to show.
@@ -560,7 +577,10 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      // Transparent so the gradient shows rather than the scaffold colour.
+      backgroundColor: Colors.transparent,
+      body: AppBackground(
+        child: Column(
         children: [
           AuroraHeader(
             title: 'Your streak',
@@ -676,6 +696,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
             ),
           ),
         ],
+      ),
       ),
     );
   }

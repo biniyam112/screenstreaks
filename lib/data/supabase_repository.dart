@@ -238,6 +238,8 @@ class SupabaseRepository implements Repository {
       displayName: json['display_name'] as String? ?? 'Friend',
       shareCode: json['share_code'] as String? ?? '',
       dailyLimitMinutes: json['daily_limit_minutes'] as int? ?? 120,
+      trackedApps: json['tracked_apps'] as int?,
+      trackedCategories: json['tracked_categories'] as int?,
       avatarUrl: json['avatar_url'] as String?,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
@@ -709,5 +711,15 @@ class SupabaseRepository implements Repository {
   @override
   Future<void> renameGroup(String groupId, String name) async {
     await _supabase.from('groups').update({'name': name}).eq('id', groupId);
+  }
+
+  @override
+  Future<void> setTrackedCounts(int apps, int categories) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    await _supabase.from('profiles').update({
+      'tracked_apps': apps,
+      'tracked_categories': categories,
+    }).eq('id', userId);
   }
 }

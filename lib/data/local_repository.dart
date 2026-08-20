@@ -488,4 +488,7 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> renameGroup(String groupId, String name) async {}
+
+  @override
+  Future<void> setTrackedCounts(int apps, int categories) async {}
 }

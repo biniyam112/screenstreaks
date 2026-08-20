@@ -1,3 +1,4 @@
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
@@ -81,15 +82,24 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: context.cSurface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.cDivider),
+    // Frosted rather than solid, so the background gradient reads through.
+    // The hairline keeps the edge visible where the blur and the backdrop
+    // are close in tone.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: context.cSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: context.cCardBorder),
+          ),
+          child: child,
+        ),
       ),
-      child: child,
     );
   }
 }

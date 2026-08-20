@@ -17,21 +17,44 @@ class AppColors {
 extension AppColorsX on BuildContext {
   bool get _dark => Theme.of(this).brightness == Brightness.dark;
 
-  /// App scaffold background.
-  Color get cBg => _dark ? const Color(0xFF0B0B0D) : const Color(0xFFF4F5F7);
+  /// App scaffold background. Mostly hidden behind [AppBackground]'s
+  /// gradient — this is the fallback where that isn't used.
+  Color get cBg => _dark ? const Color(0xFF1E2740) : const Color(0xFFC3B4D6);
 
-  /// Card / raised surface.
-  Color get cSurface => _dark ? const Color(0xFF161619) : Colors.white;
+  /// The three stops of the background gradient, top to bottom.
+  List<Color> get cGradient => _dark
+      ? const [Color(0xFF1E2740), Color(0xFF2B2440), Color(0xFF3A2833)]
+      : const [Color(0xFF8FA8DC), Color(0xFFC3B4D6), Color(0xFFEFCDD1)];
+
+  /// The soft bloom behind the middle of the screen.
+  Color get cBloom => _dark
+      ? const Color(0xFFA0B4E6).withValues(alpha: 0.14)
+      : Colors.white.withValues(alpha: 0.28);
+
+  /// Card / raised surface. Translucent so the gradient reads through.
+  Color get cSurface => _dark
+      ? Colors.white.withValues(alpha: 0.07)
+      : Colors.white.withValues(alpha: 0.42);
+
+  /// Hairline that keeps a translucent card's edge visible.
+  Color get cCardBorder => _dark
+      ? Colors.white.withValues(alpha: 0.13)
+      : Colors.white.withValues(alpha: 0.55);
 
   /// Inner / elevated surface (chips, wells inside cards).
   Color get cSurfaceHi =>
       _dark ? const Color(0xFF202027) : const Color(0xFFEFF1F4);
 
-  Color get cText => _dark ? const Color(0xFFF4F4F6) : const Color(0xFF16161A);
+  Color get cText => _dark ? const Color(0xFFF4F4F6) : const Color(0xFF1A1726);
   Color get cTextSec =>
-      _dark ? const Color(0xFF9A9AA4) : const Color(0xFF5A5A66);
+      _dark ? const Color(0xFF9A9CB0) : const Color(0xFF4A4258);
   Color get cTextTer =>
-      _dark ? const Color(0xFF5E5E68) : const Color(0xFF9A9AA6);
-  Color get cDivider =>
-      _dark ? const Color(0xFF26262B) : const Color(0xFFE6E7EC);
+      _dark ? const Color(0xFF6A6A7A) : const Color(0xFF6E6880);
+  Color get cDivider => _dark
+      ? Colors.white.withValues(alpha: 0.12)
+      : Colors.white.withValues(alpha: 0.45);
+
+  /// Green and red need darkening on the pale gradient to stay legible.
+  Color get cGood => _dark ? AppColors.primary : const Color(0xFF0A5A41);
+  Color get cBad => _dark ? AppColors.danger : const Color(0xFFC4342D);
 }

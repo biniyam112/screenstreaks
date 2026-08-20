@@ -81,6 +81,10 @@ abstract class Repository {
   Future<void> deleteGroup(String groupId) =>
       throw UnimplementedError('Groups not supported by this backend');
 
+  /// Record how many apps and categories are being watched, so friends can
+  /// see thin coverage.
+  Future<void> setTrackedCounts(int apps, int categories) async {}
+
   /// Rename a group you administer.
   Future<void> renameGroup(String groupId, String name) =>
       throw UnimplementedError('Groups not supported by this backend');

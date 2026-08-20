@@ -128,6 +128,20 @@ enum ScreenTimeProbe {
                     forSecurityApplicationGroupIdentifier: suite)
                 result(url?.path ?? "")
 
+            case "selectionCount":
+                // Apple only gives us opaque tokens, so we can count what
+                // someone tracks but never name it.
+                let defaults = UserDefaults(suiteName: suite)
+                var apps = 0
+                var categories = 0
+                if let data = defaults?.data(forKey: "selection"),
+                   let decoded = try? JSONDecoder().decode(
+                       FamilyActivitySelection.self, from: data) {
+                    apps = decoded.applicationTokens.count
+                    categories = decoded.categoryTokens.count
+                }
+                result(["apps": apps, "categories": categories])
+
             case "hasSelection":
                 restoreSelectionIfNeeded()
                 let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
@@ -187,6 +201,18 @@ enum ScreenTimeProbe {
                 ) { granted, _ in
                     DispatchQueue.main.async { result(granted) }
                 }
+
+            case "setPendingLimit":
+                // Mirrors Flutter's pending goal into the app group so the
+                // midnight re-arm can apply it without the app being open.
+                let mins = (call.arguments as? Int) ?? 0
+                let defaults = UserDefaults(suiteName: suite)
+                if mins > 0 {
+                    defaults?.set(mins, forKey: "pending_limit")
+                } else {
+                    defaults?.removeObject(forKey: "pending_limit")
+                }
+                result("ok")
 
             case "activeLimit":
                 result(UserDefaults(suiteName: suite)?.integer(forKey: "active_limit") ?? 0)

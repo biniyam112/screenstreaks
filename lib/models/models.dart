@@ -198,6 +198,8 @@ class Profile {
     required this.displayName,
     required this.shareCode,
     required this.dailyLimitMinutes,
+    this.trackedApps,
+    this.trackedCategories,
     required this.records,
     this.avatarColor,
     this.avatarUrl,
@@ -211,6 +213,18 @@ class Profile {
   final String displayName;
   final String shareCode;
   final int dailyLimitMinutes;
+
+  /// What they're watching. Apple only exposes counts, never which apps —
+  /// enough to show that someone is tracking a single app.
+  final int? trackedApps;
+  final int? trackedCategories;
+
+  /// Thin coverage worth flagging. Categories can each cover many apps, so
+  /// the two are added rather than judged separately.
+  bool get thinSelection {
+    final total = (trackedApps ?? 0) + (trackedCategories ?? 0);
+    return trackedApps != null && total < 3;
+  }
 
   /// History, most-recent last. Keyed access via [byDay].
   final List<DailyRecord> records;
@@ -276,6 +290,8 @@ class Profile {
     'displayName': displayName,
     'shareCode': shareCode,
     'dailyLimitMinutes': dailyLimitMinutes,
+    'trackedApps': trackedApps,
+    'trackedCategories': trackedCategories,
     'avatarColor': avatarColor?.toARGB32(),
     'avatarUrl': avatarUrl,
     'firstName': firstName,
