@@ -164,7 +164,7 @@ enum ScreenTimeProbe {
 
             case "monitoringSince":
                 let d = UserDefaults(suiteName: suite)?
-                    .object(forKey: "monitoring_started") as? Date
+                    .object(forKey: "session_started") as? Date
                 result(d?.timeIntervalSince1970 ?? 0)
 
             case "sleepFlags":
@@ -308,6 +308,7 @@ enum ScreenTimeProbe {
                 let defaults = UserDefaults(suiteName: suite)
                 defaults?.removeObject(forKey: "active_limit")
                 defaults?.removeObject(forKey: "monitoring_started")
+                defaults?.removeObject(forKey: "session_started")
                 result("stopped")
 
             default:
@@ -408,5 +409,6 @@ enum ScreenTimeProbe {
         // Remember when this interval began so a partial first day isn't
         // recorded as a pass — we can only prove a day we watched in full.
         defaults?.set(Date(), forKey: "monitoring_started")
+        defaults?.set(Date(), forKey: "session_started")
     }
 }
