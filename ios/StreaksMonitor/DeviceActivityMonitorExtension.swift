@@ -193,6 +193,18 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
                    "You're 30 minutes from your limit today.")
             return
         }
+        // Usage can't exceed elapsed time. A threshold firing before enough
+        // of the day has passed to reach it is iOS misbehaving — there are
+        // reports of didReachThreshold firing on event creation — and
+        // recording it would break a streak that was never lost.
+        let limit = defaults?.integer(forKey: "active_limit") ?? 0
+        let elapsed = Date().timeIntervalSince(
+            Calendar.current.startOfDay(for: Date())) / 60
+        if limit > 0 && elapsed < Double(limit) {
+            log("threshold at \(Int(elapsed))m of \(limit)m — ignored")
+            return
+        }
+
         record(false, for: todayKey)
         // Remember it independently of the drain queue — pending_outcomes is
         // cleared once the app reads it, and the day-end guard needs to know
