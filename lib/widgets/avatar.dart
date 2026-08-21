@@ -12,7 +12,11 @@ class Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = profile.avatarColor ?? AppColors.primary;
+    // The default tint disappears against a pale card, so light mode gets
+    // a deeper version.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final base = profile.avatarColor ?? AppColors.primary;
+    final color = dark ? base : Color.lerp(base, Colors.black, 0.35)!;
     final url = profile.avatarUrl;
 
     return Container(

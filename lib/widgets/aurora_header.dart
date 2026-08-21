@@ -20,11 +20,12 @@ class AuroraHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = context.cBg;
     return Container(
       height: height,
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      decoration: BoxDecoration(color: bg),
+      // Transparent — the app's gradient runs behind it, so painting a solid
+      // colour here left a strip that didn't match the rest of the screen.
+      color: Colors.transparent,
       child: SafeArea(
         bottom: false,
         child: Row(

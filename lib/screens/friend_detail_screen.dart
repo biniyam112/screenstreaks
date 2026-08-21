@@ -69,6 +69,7 @@ class _FriendDetailScreenState extends State<FriendDetailScreen> {
   Widget build(BuildContext context) {
     final ready = _friend != null && _me != null;
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(_friend?.displayName ?? 'Friend'),
         actions: [

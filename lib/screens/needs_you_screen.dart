@@ -89,6 +89,7 @@ class _NeedsYouScreenState extends State<NeedsYouScreen> {
     final nothing = _invites.isEmpty && _proposals.isEmpty && _sleepDay == null;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Needs you')),
       body: SafeArea(
         child: _loading

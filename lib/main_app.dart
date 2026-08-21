@@ -13,6 +13,7 @@ import 'screens/sign_in_screen.dart';
 import 'services/prefs.dart';
 import 'theme_provider.dart';
 import 'screens/social_screen.dart';
+import 'widgets/app_background.dart';
 
 /// Exposes sign-out to descendant screens (e.g. SettingsScreen).
 class AuthScope extends InheritedWidget {
@@ -81,13 +82,31 @@ class _MainAppState extends State<MainApp> {
       title: 'Undr',
       navigatorKey: MainApp.navigatorKey,
       debugShowCheckedModeBanner: false,
-      theme: ThemeScope.of(context).currentTheme,
+      theme: ThemeScope.of(context).currentTheme.copyWith(
+            // Sliding a transparent screen over a fixed gradient looks like
+            // the background is moving. Fading avoids that entirely.
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+              },
+            ),
+          ),
       // AuthScope is injected here — *above* the Navigator — so it's an
       // ancestor of every pushed route (e.g. SettingsScreen), not just the
       // home page. Wrapping `home` directly left pushed routes unable to find
       // it, which crashed sign-out with "AuthScope not found".
       builder: (context, child) {
-        if (_signedIn != true) return child!;
+        // The gradient sits *behind* the Navigator rather than wrapping each
+        // route — otherwise every screen paints its own copy and they slide
+        // against each other during a transition.
+        child = Stack(
+          children: [
+            const Positioned.fill(child: AppBackground(child: SizedBox())),
+            child!,
+          ],
+        );
+        if (_signedIn != true) return child;
         return AuthScope(
           onSignOut: () async {
             await RepoScope.of(context).signOut();
@@ -194,6 +213,9 @@ class _RootShellState extends State<RootShell> {
     ];
 
     return Scaffold(
+      // The gradient lives here rather than per screen, so every tab shares
+      // it and nothing has to remember to opt in.
+      backgroundColor: Colors.transparent,
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -201,6 +223,7 @@ class _RootShellState extends State<RootShell> {
         ),
         child: NavigationBar(
           height: 64,
+          // Frosted, like the cards — the gradient carries through.
           backgroundColor: context.cSurface,
           // No pill — the filled icon lights up in its own colour when active.
           indicatorColor: Colors.transparent,

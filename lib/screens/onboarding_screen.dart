@@ -151,6 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [

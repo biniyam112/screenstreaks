@@ -247,6 +247,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final months = _months;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('History')),
       body: SafeArea(
         child: ListView.builder(

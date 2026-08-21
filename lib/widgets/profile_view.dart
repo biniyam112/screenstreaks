@@ -247,7 +247,7 @@ class _MonitorDot extends StatelessWidget {
   Widget build(BuildContext context) {
     // Green whenever it's counting, red when it isn't. The "counting Xh"
     // text still says the day is only partly covered.
-    final color = live ? AppColors.primary : AppColors.danger;
+    final color = live ? context.cGood : context.cBad;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
       decoration: BoxDecoration(
@@ -506,14 +506,14 @@ class _TodayStatus extends StatelessWidget {
       sub = 'Did you stay under today?';
     } else if (record!.limitMet) {
       icon = IconsaxPlusBold.tick_circle;
-      color = AppColors.primary;
+      color = context.cGood;
       label = 'Under limit today';
       sub = (record!.usedMinutes != null && !compact)
           ? '${formatDuration(record!.usedMinutes!)} of ${formatDuration(record!.limitMinutes)}'
           : 'Streak alive';
     } else {
       icon = IconsaxPlusBold.close_circle;
-      color = AppColors.danger;
+      color = context.cBad;
       label = 'Over limit today';
       sub = (record!.usedMinutes != null && !compact)
           ? '${formatDuration(record!.usedMinutes!)} of ${formatDuration(record!.limitMinutes)}'
@@ -566,15 +566,15 @@ class _StatRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final rate = (profile.successRate(30) * 100).round();
     final items = [
-      _Stat(IconsaxPlusBold.flash_1, '${profile.currentStreak}', 'Streak', AppColors.accent),
+      _Stat(IconsaxPlusBold.flash_1, '${profile.currentStreak}', 'Streak', context.cWarn),
       _Stat(IconsaxPlusBold.cup, '${profile.longestStreak}', 'Best', AppColors.info),
-      _Stat(IconsaxPlusBold.chart_2, '$rate%', '30d', AppColors.primary),
+      _Stat(IconsaxPlusBold.chart_2, '$rate%', '30d', context.cGood),
       if (passesLeft != null)
         _Stat(
             IconsaxPlusBold.shield_tick,
             '$passesLeft',
             passesLeft! < 0 ? 'Owed' : 'Passes',
-            passesLeft! < 0 ? AppColors.danger : AppColors.warning)
+            passesLeft! < 0 ? context.cBad : context.cWarn)
       else
         _Stat(IconsaxPlusBold.tick_circle, '${profile.totalMet}', 'Met',
             AppColors.primary),

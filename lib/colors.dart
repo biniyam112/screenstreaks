@@ -34,6 +34,8 @@ extension AppColorsX on BuildContext {
   /// Card / raised surface. Translucent so the gradient reads through.
   Color get cSurface => _dark
       ? Colors.white.withValues(alpha: 0.07)
+      // Thin, so the gradient reads through. The accents below are darkened
+      // to compensate rather than the card being made opaque.
       : Colors.white.withValues(alpha: 0.42);
 
   /// Hairline that keeps a translucent card's edge visible.
@@ -47,7 +49,7 @@ extension AppColorsX on BuildContext {
 
   Color get cText => _dark ? const Color(0xFFF4F4F6) : const Color(0xFF1A1726);
   Color get cTextSec =>
-      _dark ? const Color(0xFF9A9CB0) : const Color(0xFF4A4258);
+      _dark ? const Color(0xFF9A9CB0) : const Color(0xFF3A3448);
   Color get cTextTer =>
       _dark ? const Color(0xFF6A6A7A) : const Color(0xFF6E6880);
   Color get cDivider => _dark
@@ -55,6 +57,12 @@ extension AppColorsX on BuildContext {
       : Colors.white.withValues(alpha: 0.45);
 
   /// Green and red need darkening on the pale gradient to stay legible.
-  Color get cGood => _dark ? AppColors.primary : const Color(0xFF0A5A41);
-  Color get cBad => _dark ? AppColors.danger : const Color(0xFFC4342D);
+  Color get cGood => _dark ? AppColors.primary : const Color(0xFF064E38);
+  Color get cBad => _dark ? AppColors.danger : const Color(0xFFA32A24);
+  Color get cWarn => _dark ? AppColors.accent : const Color(0xFF8A3F0C);
+
+  /// Fills like calendar squares and progress bars, which carry white text
+  /// and sit on the thin card.
+  Color get cGoodFill => _dark ? AppColors.primary : const Color(0xFF0B7A57);
+  Color get cBadFill => _dark ? AppColors.danger : const Color(0xFFC4342D);
 }

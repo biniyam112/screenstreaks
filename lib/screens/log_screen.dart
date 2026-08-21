@@ -39,6 +39,7 @@ class _LogScreenState extends State<LogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Activity log'),
         actions: [

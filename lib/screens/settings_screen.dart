@@ -276,6 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: const Text('Settings')),
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())

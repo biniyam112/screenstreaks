@@ -97,6 +97,7 @@ class GroupHistoryScreen extends StatelessWidget {
     final months = _months;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: Text(groupName)),
       body: SafeArea(
         child: ListView.builder(

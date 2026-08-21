@@ -94,7 +94,9 @@ class AppTheme {
             displayColor: text,
           ),
       appBarTheme: AppBarTheme(
-        backgroundColor: bg,
+        // Transparent so the gradient runs unbroken from the status bar to
+        // the nav bar, rather than being framed by two solid strips.
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,

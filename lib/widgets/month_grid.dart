@@ -132,10 +132,10 @@ class _Cell extends StatelessWidget {
       fill = const Color(0xFF6E635C).withValues(alpha: 0.55);
       text = Colors.white.withValues(alpha: 0.75);
     } else if (record!.limitMet) {
-      fill = AppColors.primary.withValues(alpha: 0.85);
+      fill = context.cGoodFill.withValues(alpha: 0.85);
       text = Colors.white;
     } else {
-      fill = AppColors.danger.withValues(alpha: 0.75);
+      fill = context.cBadFill.withValues(alpha: 0.75);
       text = Colors.white;
     }
 

@@ -105,6 +105,7 @@ class _FeedScreenState extends State<FeedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           const AuroraHeader(title: 'Feed', tint: AppColors.accent),

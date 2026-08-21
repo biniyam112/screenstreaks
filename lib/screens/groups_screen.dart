@@ -380,6 +380,7 @@ class _GroupsScreenState extends State<GroupsScreen>
     if (widget.embedded) return _body(context);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           AuroraHeader(
