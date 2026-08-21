@@ -205,7 +205,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       HomeWidgetService.update(me);
       // Keeps the widget's limits current without waiting for a visit to
       // the Social tab.
-      if (mounted) WidgetPush.push(repo);
+      if (mounted) WidgetPush.push(repo, meProfile: me);
 
       // Accounts made before these fields existed have no first name — ask
       // once so lists and the widget have something to show.

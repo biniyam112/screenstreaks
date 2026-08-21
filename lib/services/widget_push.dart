@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 import 'package:home_widget/home_widget.dart';
@@ -15,12 +16,20 @@ import 'prefs.dart';
 class WidgetPush {
   WidgetPush._();
 
-  static Future<void> push(Repository repo) async {
+  /// [me] lets a caller pass the profile it already loaded. Fetching again
+  /// can return a cached copy that's missing today's record, which is how
+  /// the widget ended up showing a streak the app didn't.
+  static Future<void> push(Repository repo, {Profile? meProfile}) async {
     try {
-      final id = await Prefs.widgetGroupId();
-      if (id == null) return;
-
       final groups = await repo.groups();
+      if (groups.isEmpty) {
+        debugPrint('WIDGET PUSH: no groups');
+        return;
+      }
+
+      // Fall back to the first group rather than doing nothing — an unpinned
+      // widget was silently keeping whatever payload it last received.
+      final id = await Prefs.widgetGroupId() ?? groups.first.id;
       Group? g;
       for (final x in groups) {
         if (x.id == id) g = x;
@@ -29,7 +38,7 @@ class WidgetPush {
 
       // Members can include people we aren't connected to, so fetch anyone
       // missing rather than relying on the friends list.
-      final me = await repo.me();
+      final me = meProfile ?? await repo.me();
       final friends = await repo.friends();
       final people = {me.id: me, for (final f in friends) f.id: f};
       for (final memberId in g.memberIds) {
@@ -76,8 +85,10 @@ class WidgetPush {
         }),
       );
       await HomeWidget.updateWidget(iOSName: 'StreaksWidget');
-    } catch (_) {
-      // The widget keeps its last payload; never break a screen load.
+    } catch (e) {
+      // The widget keeps its last payload; never break a screen load — but
+      // a silent failure here means it shows stale data forever.
+      debugPrint('WIDGET PUSH FAILED: ' + e.toString());
     }
   }
 }
