@@ -1005,6 +1005,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         : membersOverOn(members, dateOnly(DateTime.now()), l);
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Column(
         children: [
           AuroraHeader(
@@ -1012,7 +1013,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             tint: AppColors.info,
             trailing: PopupMenuButton<String>(
               icon: Icon(IconsaxPlusLinear.more, color: context.cText),
-              color: context.cSurface,
+              // Opaque like the dialogs — reading a menu through the page
+              // behind it doesn't work.
+              color: context.cSheet,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),

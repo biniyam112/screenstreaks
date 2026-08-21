@@ -29,6 +29,7 @@ class ProfileView extends StatelessWidget {
     this.onOpenHistory,
     this.passesLeft,
     this.monitoring,
+    this.starting = false,
     this.onFixMonitoring,
     this.stale = false,
     this.countingSince,
@@ -59,6 +60,9 @@ class ProfileView extends StatelessWidget {
 
   /// Whether Screen Time monitoring is live. Hidden when null.
   final bool? monitoring;
+
+  /// Registration takes a few seconds; the pill says so meanwhile.
+  final bool starting;
 
   /// Tapping the dot when monitoring is off.
   final VoidCallback? onFixMonitoring;
@@ -128,7 +132,40 @@ class ProfileView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
         ],
-        if (monitoring != null) ...[
+        if (starting) ...[
+          // Registration blocks on a system service for a few seconds.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: context.cSurface,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: context.cCardBorder),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.6,
+                    color: context.cTextSec,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Starting…',
+                  style: appFont(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: context.cTextSec,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+        ] else if (monitoring != null) ...[
           _MonitorDot(
             live: monitoring!,
             onTap: onFixMonitoring,

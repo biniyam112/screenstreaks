@@ -45,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   /// Null until the first check completes — defaulting to false made the
   /// pill say "Not tracking" for a moment even when it was.
   bool? _monitoring;
+  bool _starting = false;
   int _passesLeft = 1;
   Duration? _offSince;
   bool _stale = false;
@@ -452,8 +453,16 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
 
     await ScreenTime.requestAuthorization();
     if (!await ScreenTime.hasSelection()) await ScreenTime.pickApps();
+    // Registering blocks on a system service for a few seconds — say so
+    // rather than leaving the pill blank.
+    if (mounted) setState(() => _starting = true);
     final ok = await ScreenTime.startMonitoring(await Prefs.goalMinutes());
+    if (mounted) setState(() => _starting = false);
     if (ok) await Prefs.setTrackingEnabled(true);
+    // The pill can say so immediately — startMonitoring returning true means
+    // it's registered, and waiting for _load to re-derive it added seconds
+    // of the pill sitting blank.
+    if (mounted) setState(() => _monitoring = ok);
     if (mounted) _load();
   }
 
@@ -675,6 +684,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     passesLeft: _passesLeft,
                     monitoring:
                         ScreenTime.supported ? _monitoring : null,
+                    starting: _starting,
                     stale: _stale,
                     countingSince: _countingSince,
                     dayState: _dayState,
