@@ -90,7 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       final ok = await showDialog<bool>(
         context: context,
         builder: (c) => AlertDialog(
-          backgroundColor: c.cSurface,
+          backgroundColor: c.cSheet,
           title: Text('Starts tomorrow',
               style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
           content: Text(
@@ -167,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Stop tracking?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
@@ -241,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       await showDialog<void>(
         context: context,
         builder: (c) => AlertDialog(
-          backgroundColor: c.cSurface,
+          backgroundColor: c.cSheet,
           title: Text('Starts tomorrow',
               style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
           content: Text(

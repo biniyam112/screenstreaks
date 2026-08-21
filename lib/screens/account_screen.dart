@@ -173,7 +173,7 @@ class _AccountScreenState extends State<AccountScreen> {
                             final ok = await showDialog<bool>(
                               context: context,
                               builder: (c) => AlertDialog(
-                                backgroundColor: c.cSurface,
+                                backgroundColor: c.cSheet,
                                 title: Text(
                                   'Sign out?',
                                   style: appFont(

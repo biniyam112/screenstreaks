@@ -370,7 +370,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final claim = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Screen left on?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
@@ -420,7 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final start = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Start tracking?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
@@ -479,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Stop tracking?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(

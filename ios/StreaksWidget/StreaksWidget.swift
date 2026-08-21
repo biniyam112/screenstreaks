@@ -6,6 +6,10 @@ extension Color {
     /// Brand hues read well on both backgrounds, so only the neutrals swap.
     static let brandPrimary = Color(red: 0.063, green: 0.725, blue: 0.506) // #10B981
     static let brandAccent  = Color(red: 0.984, green: 0.549, blue: 0.235) // #FB8C3C
+    // On the pale gradient the brand colours wash out, so light mode uses
+    // deeper versions — same trade the app makes.
+    static let brandPrimaryDeep = Color(red: 0.024, green: 0.306, blue: 0.220) // #064E38
+    static let brandAccentDeep  = Color(red: 0.541, green: 0.247, blue: 0.047) // #8A3F0C
 
     static let surfaceDark  = Color(red: 0.086, green: 0.086, blue: 0.098) // #161619
     static let surfaceLight = Color(red: 1.0,   green: 1.0,   blue: 1.0)   // #FFFFFF
@@ -285,8 +289,34 @@ struct StreaksWidgetEntryView: View {
 /// Background that follows the system appearance.
 struct ThemedBackground: View {
     @Environment(\.colorScheme) var colorScheme
+
+    // Matches the app: blue through plum to a warm base, dimmed for dark
+    // mode. No blur here — widgets can't use one.
     var body: some View {
-        (colorScheme == .dark ? Color.surfaceDark : Color.surfaceLight)
+        let stops: [Color] = colorScheme == .dark
+            ? [Color(red: 0.118, green: 0.153, blue: 0.251),
+               Color(red: 0.169, green: 0.141, blue: 0.251),
+               Color(red: 0.227, green: 0.157, blue: 0.200)]
+            : [Color(red: 0.561, green: 0.659, blue: 0.863),
+               Color(red: 0.765, green: 0.706, blue: 0.839),
+               Color(red: 0.937, green: 0.804, blue: 0.820)]
+
+        ZStack {
+            LinearGradient(colors: stops,
+                           startPoint: .top,
+                           endPoint: .bottom)
+            // The bloom the app has, softened for the smaller canvas.
+            RadialGradient(
+                colors: [
+                    (colorScheme == .dark ? Color(red: 0.627, green: 0.706, blue: 0.902)
+                                          : .white).opacity(colorScheme == .dark ? 0.12 : 0.22),
+                    .clear,
+                ],
+                center: .init(x: 0.5, y: 0.4),
+                startRadius: 0,
+                endRadius: 160
+            )
+        }
     }
 }
 

@@ -50,7 +50,7 @@ class GroupHistoryScreen extends StatelessWidget {
 
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: context.cSurface,
+      backgroundColor: context.cSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),

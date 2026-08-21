@@ -328,7 +328,7 @@ class _GroupsScreenState extends State<GroupsScreen>
                     confirmDismiss: (_) => showDialog<bool>(
                       context: context,
                       builder: (c) => AlertDialog(
-                        backgroundColor: c.cSurface,
+                        backgroundColor: c.cSheet,
                         title: Text('Delete ${g.name}?',
                             style: appFont(
                                 fontWeight: FontWeight.w700, color: c.cText)),
@@ -736,7 +736,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Leave ${widget.group.name}?',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: Text(
@@ -795,7 +795,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cSurface,
+      backgroundColor: context.cSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -889,7 +889,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        backgroundColor: c.cSurface,
+        backgroundColor: c.cSheet,
         title: Text('Rename group',
             style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
         content: TextField(
@@ -937,7 +937,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     final saved = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cSurface,
+      backgroundColor: context.cSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),

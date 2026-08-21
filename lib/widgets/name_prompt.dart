@@ -26,7 +26,7 @@ Future<void> showNamePrompt(BuildContext context, Profile me) async {
     context: context,
     barrierDismissible: false,
     builder: (c) => AlertDialog(
-      backgroundColor: c.cSurface,
+      backgroundColor: c.cSheet,
       title: Text('What should we call you?',
           style: appFont(fontWeight: FontWeight.w800, color: c.cText)),
       content: Column(

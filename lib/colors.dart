@@ -38,6 +38,11 @@ extension AppColorsX on BuildContext {
       // to compensate rather than the card being made opaque.
       : Colors.white.withValues(alpha: 0.42);
 
+  /// Dialogs and sheets sit above everything, so they're solid — reading
+  /// through a modal to the page behind it doesn't work.
+  Color get cSheet =>
+      _dark ? const Color(0xFF231F33) : const Color(0xFFF6F3FA);
+
   /// Hairline that keeps a translucent card's edge visible.
   Color get cCardBorder => _dark
       ? Colors.white.withValues(alpha: 0.13)

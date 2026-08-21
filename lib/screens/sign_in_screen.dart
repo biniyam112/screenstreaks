@@ -38,7 +38,7 @@ class _SignInScreenState extends State<SignInScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: context.cSurface,
+      backgroundColor: context.cSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),

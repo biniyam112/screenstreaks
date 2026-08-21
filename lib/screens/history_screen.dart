@@ -63,7 +63,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (_pending.contains(dateOnly(day))) {
       await showModalBottomSheet<void>(
         context: context,
-        backgroundColor: context.cSurface,
+        backgroundColor: context.cSheet,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
@@ -101,7 +101,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (passKind != null) {
       await showModalBottomSheet<void>(
         context: context,
-        backgroundColor: context.cSurface,
+        backgroundColor: context.cSheet,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         ),
@@ -172,7 +172,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final spend = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: context.cSurface,
+      backgroundColor: context.cSheet,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
