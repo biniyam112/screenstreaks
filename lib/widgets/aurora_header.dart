@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax_plus/iconsax_plus.dart';
 
 import '../theme.dart';
 
@@ -10,8 +11,13 @@ class AuroraHeader extends StatelessWidget {
     required this.title,
     required this.tint,
     this.trailing,
+    this.onBack,
     this.height = 132,
   });
+
+  /// Shown as a back arrow before the title. Pushed screens need it — the
+  /// fade transition doesn't support the swipe-back gesture.
+  final VoidCallback? onBack;
 
   final String title;
   final Color tint;
@@ -30,6 +36,17 @@ class AuroraHeader extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
+            if (onBack != null) ...[
+              GestureDetector(
+                onTap: onBack,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+                  child: Icon(IconsaxPlusLinear.arrow_left_2,
+                      size: 22, color: context.cText),
+                ),
+              ),
+            ],
             Expanded(
               child: Text(
                 title,

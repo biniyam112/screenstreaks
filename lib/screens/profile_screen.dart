@@ -168,6 +168,32 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       try {
         needsYou = (await repo.pendingInvites()).length +
             (await repo.pendingProposals()).length;
+
+        // A claimable sleep pass shows on the Needs you screen, so it should
+        // count here too — otherwise the bell says nothing while the screen
+        // has a card waiting.
+        if (ScreenTime.supported) {
+          final flagged = await ScreenTime.sleepFlags();
+          if (flagged.isNotEmpty) {
+            final usedSleep = spent.any(
+                (p) => p.kind == 'sleep' && p.day.isAfter(weekAgo));
+            if (!usedSleep) {
+              final claimed = spent.map((p) => dateOnly(p.day)).toSet();
+              for (final key in flagged) {
+                final day = ScreenTime.parseDay(key);
+                if (day == null) continue;
+                final d = dateOnly(day);
+                if (claimed.contains(d)) continue;
+                final record = me.byDay[d];
+                if (record == null || record.limitMet || record.partial) {
+                  continue;
+                }
+                needsYou++;
+                break;
+              }
+            }
+          }
+        }
       } catch (_) {
         // The badge is cosmetic; never let it break the load.
       }

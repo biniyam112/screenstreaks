@@ -1011,6 +1011,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           AuroraHeader(
             title: widget.group.name,
             tint: AppColors.info,
+            onBack: () => Navigator.of(context).pop(),
             trailing: PopupMenuButton<String>(
               icon: Icon(IconsaxPlusLinear.more, color: context.cText),
               // Opaque like the dialogs — reading a menu through the page
