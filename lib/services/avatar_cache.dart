@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
@@ -15,7 +16,11 @@ class AvatarCache {
   /// for whoever has a photo. Skips anyone already cached at that URL.
   static Future<Map<String, String>> cache(List<Profile> people) async {
     final dir = await ScreenTime.appGroupPath();
-    if (dir == null) return const {};
+    if (dir == null) {
+      debugPrint('AVATAR CACHE: no app group path');
+      await ScreenTime.log('avatar cache: no app group path');
+      return const {};
+    }
 
     final out = <String, String>{};
     for (final p in people) {
@@ -33,8 +38,10 @@ class AvatarCache {
           await file.writeAsBytes(res.bodyBytes);
         }
         out[p.id] = name;
-      } catch (_) {
+      } catch (e) {
         // Skip this one; initials will show instead.
+        debugPrint('AVATAR CACHE failed for ' + p.id + ': ' + e.toString());
+        await ScreenTime.log('avatar cache failed: ' + e.toString());
       }
     }
     return out;
