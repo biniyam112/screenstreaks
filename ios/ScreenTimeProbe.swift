@@ -147,6 +147,16 @@ enum ScreenTimeProbe {
                 }
                 result(["apps": apps, "categories": categories])
 
+            case "clearSelection":
+                // The selection lives on the device, so a new account would
+                // otherwise inherit — and watch — whatever the last person
+                // chose.
+                let defaults = UserDefaults(suiteName: suite)
+                defaults?.removeObject(forKey: "selection")
+                defaults?.removeObject(forKey: "pending_selection")
+                UserDefaults.standard.removeObject(forKey: "selection_backup")
+                result("cleared")
+
             case "hasSelection":
                 restoreSelectionIfNeeded()
                 let data = UserDefaults(suiteName: suite)?.data(forKey: "selection")
@@ -197,6 +207,21 @@ enum ScreenTimeProbe {
                     "warnedAt": warned?.timeIntervalSince1970 ?? 0,
                     "overAt": over?.timeIntervalSince1970 ?? 0,
                 ])
+
+            case "notificationStatus":
+                // iOS only shows its prompt once. After that the app can
+                // only send people to Settings, so the UI needs to know
+                // which case it's in.
+                UNUserNotificationCenter.current().getNotificationSettings {
+                    settings in
+                    let value: String
+                    switch settings.authorizationStatus {
+                    case .notDetermined: value = "ask"
+                    case .authorized, .provisional, .ephemeral: value = "on"
+                    default: value = "off"
+                    }
+                    DispatchQueue.main.async { result(value) }
+                }
 
             case "authorizeNotifications":
                 // The extension posts through UNUserNotificationCenter, so

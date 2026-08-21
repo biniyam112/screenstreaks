@@ -306,4 +306,27 @@ class ScreenTime {
       return (apps: 0, categories: 0);
     }
   }
+
+  /// Forget which apps are watched — used when a different account signs in,
+  /// so they choose their own rather than inheriting the last person's.
+  static Future<void> clearSelection() async {
+    if (!supported) return;
+    try {
+      await _channel.invokeMethod('clearSelection');
+    } on PlatformException {
+      // Nothing to clear.
+    }
+  }
+
+  /// 'ask' if iOS will still show its prompt, 'on' or 'off' if it won't —
+  /// in which case only Settings can change it.
+  static Future<String> notificationStatus() async {
+    if (!supported) return 'off';
+    try {
+      return await _channel.invokeMethod('notificationStatus') as String? ??
+          'off';
+    } on PlatformException {
+      return 'off';
+    }
+  }
 }

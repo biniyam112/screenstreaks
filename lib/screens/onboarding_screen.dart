@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:iconsax_plus/iconsax_plus.dart';
 
 import '../app_events.dart';
@@ -28,6 +29,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nicknameController = TextEditingController();
 
   int _page = 0;
+  bool _alerts = false;
   bool _tracking = false;
   int _limit = 120;
   bool _loading = true;
@@ -92,6 +94,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   /// Ask for Screen Time access and start watching the chosen limit. If the
   /// user declines we carry on — they can turn it on later in Settings.
+  /// The warning event is useless if iOS never shows it, and the toggle
+  /// buried in Settings is easy to miss.
+  Future<void> _enableAlerts() async {
+    final status = await ScreenTime.notificationStatus();
+
+    // iOS shows its prompt once. If it's already been answered, the button
+    // would silently do nothing — so send them to Settings instead.
+    if (status != 'ask') {
+      await Prefs.setNotificationsEnabled(status == 'on');
+      if (!mounted) return;
+      setState(() => _alerts = status == 'on');
+      await showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          backgroundColor: c.cSheet,
+          title: Text(status == 'on' ? 'Alerts are already on' : 'Alerts are off',
+              style: appFont(fontWeight: FontWeight.w700, color: c.cText)),
+          content: Text(
+            status == 'on'
+                ? "You'll hear from Undr when you're near your limit. You can "
+                    'change that in iOS Settings.'
+                : 'iOS has alerts turned off for Undr. You can turn them back '
+                    'on in Settings.',
+            style: appFont(fontWeight: FontWeight.w500, color: c.cTextSec),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c),
+              child: Text('Not now',
+                  style: appFont(
+                      color: c.cTextSec, fontWeight: FontWeight.w600)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(c);
+                launchUrl(Uri.parse('app-settings:'));
+              },
+              child: Text('Open Settings',
+                  style: appFont(
+                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final granted = await ScreenTime.authorizeNotifications();
+    await Prefs.setNotificationsEnabled(granted);
+    if (mounted) setState(() => _alerts = granted);
+  }
+
   Future<void> _enableTracking() async {
     final ok = await ScreenTime.requestAuthorization();
     if (!ok || !mounted) return;
@@ -131,6 +185,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
       await repo.setDisplayName(name.isNotEmpty ? name : first);
       await Prefs.setOnboarded(true);
+      final uid = RepoScope.of(context).currentUserId;
+      if (uid != null) {
+        await Prefs.setOnboardedUser(uid);
+        // Claim the monitor too, or My Streak's owner check sees the previous
+        // account and clears the selection this screen just set.
+        await Prefs.setMonitorOwner(uid);
+      }
+      await RepoScope.of(context).markOnboarded();
       notifyProfileChanged();
       if (!mounted) return;
       widget.onDone();
@@ -176,6 +238,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   if (ScreenTime.supported) ...[
                     const SizedBox(width: 6),
                     _Dot(active: _page == 2),
+                  if (ScreenTime.supported) const SizedBox(width: 6),
+                  if (ScreenTime.supported) _Dot(active: _page == 3),
                   ],
                   const Spacer(),
                   const SizedBox(width: 40),
@@ -202,12 +266,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       enabled: _tracking,
                       onEnable: _enableTracking,
                     ),
+                  if (ScreenTime.supported)
+                    _AlertsPage(
+                      enabled: _alerts,
+                      onEnable: _enableAlerts,
+                    ),
                 ],
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              child: _page < (ScreenTime.supported ? 2 : 1)
+              child: _page < (ScreenTime.supported ? 3 : 1)
                   ? ModernButton(
                       label: 'Continue',
                       icon: IconsaxPlusBold.arrow_right_3,
@@ -288,6 +357,68 @@ class _LimitPage extends StatelessWidget {
         ),
         const SizedBox(height: 36),
         GoalPicker(minutes: limit, onChanged: onChanged),
+      ],
+    );
+  }
+}
+
+/// Asks for notification permission — without it the approaching-limit and
+/// over-limit alerts are silently dropped, and the warning event may as well
+/// not exist.
+class _AlertsPage extends StatelessWidget {
+  const _AlertsPage({required this.enabled, required this.onEnable});
+
+  final bool enabled;
+  final VoidCallback onEnable;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      children: [
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.info.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              enabled
+                  ? IconsaxPlusBold.tick_circle
+                  : IconsaxPlusBold.notification_bing,
+              color: AppColors.info,
+              size: 32,
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+        Text(
+          enabled ? "You'll get a heads-up" : 'Know before you go over',
+          textAlign: TextAlign.center,
+          style: appFont(
+              fontSize: 24, fontWeight: FontWeight.w800, color: context.cText),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          enabled
+              ? "We'll tell you half an hour out, and again if you pass your "
+                  'limit. Turn it off any time in Settings.'
+              : "Undr can tell you when you're half an hour from your limit, "
+                  "and when you've passed it. Without alerts you'd only find "
+                  'out by opening the app.',
+          textAlign: TextAlign.center,
+          style: appFont(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: context.cTextSec,
+            height: 1.45,
+          ),
+        ),
+        const SizedBox(height: 32),
+        if (!enabled)
+          ModernButton(label: 'Turn on alerts', onPressed: onEnable),
       ],
     );
   }

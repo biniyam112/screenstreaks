@@ -79,6 +79,15 @@ class Prefs {
       (await SharedPreferences.getInstance())
           .setInt('last_monitor_restart', when.millisecondsSinceEpoch);
 
+  /// Which account finished setup on this device. An id rather than a
+  /// boolean — a bare flag let the next person to sign in skip onboarding.
+  static Future<String?> onboardedUser() async =>
+      (await SharedPreferences.getInstance()).getString('onboarded_user');
+
+  static Future<void> setOnboardedUser(String id) async =>
+      (await SharedPreferences.getInstance())
+          .setString('onboarded_user', id);
+
   /// Which account the running monitor belongs to. Counting against one
   /// person's limit and apps means nothing for anyone else.
   static Future<String?> monitorOwner() async =>

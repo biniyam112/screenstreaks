@@ -310,4 +310,13 @@ class OfflineRepository implements Repository {
   @override
   Future<void> setTrackedCounts(int apps, int categories) =>
       _inner.setTrackedCounts(apps, categories);
+
+  @override
+  Future<bool> hasOnboarded() => _inner.hasOnboarded();
+
+  @override
+  Future<void> markOnboarded() => _inner.markOnboarded();
+
+  @override
+  String? get currentUserId => _inner.currentUserId;
 }

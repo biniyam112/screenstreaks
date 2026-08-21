@@ -159,9 +159,20 @@ class _OnboardingGateState extends State<_OnboardingGate> {
     // phone needs their own setup, and Prefs can't tell them apart.
     if (!mounted) return;
     try {
-      final me = await RepoScope.of(context).me();
-      final done = (me.displayName ?? '').trim().isNotEmpty;
-      if (done) await Prefs.setOnboarded(true);
+      final repo = RepoScope.of(context);
+      // Cached per account, so the round trip only happens once — and a
+      // different person signing in still gets their own setup.
+      final cached = await Prefs.onboardedUser();
+      final uid = repo.currentUserId;
+      // Both null would compare equal, which let a fresh account skip setup.
+      if (uid != null && cached != null && cached == uid) {
+        if (mounted) setState(() => _onboarded = true);
+        return;
+      }
+      // A flag on the account, not a name — Google fills the name in at
+      // sign-in, so checking for one made every new account skip setup.
+      final done = await repo.hasOnboarded();
+      if (done && uid != null) await Prefs.setOnboardedUser(uid);
       if (mounted) setState(() => _onboarded = done);
       return;
     } catch (_) {

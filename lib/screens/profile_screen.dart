@@ -42,7 +42,9 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
   Profile? _me;
   List<Profile> _friends = [];
   bool _loading = true;
-  bool _monitoring = false;
+  /// Null until the first check completes — defaulting to false made the
+  /// pill say "Not tracking" for a moment even when it was.
+  bool? _monitoring;
   int _passesLeft = 1;
   Duration? _offSince;
   bool _stale = false;
@@ -106,6 +108,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
       if (owner != null && owner != me.id) {
         await ScreenTime.stopMonitoring();
         await Prefs.setTrackingEnabled(false);
+        // Their apps, not the last person's.
+        await ScreenTime.clearSelection();
       }
       if (owner != me.id) await Prefs.setMonitorOwner(me.id);
 
@@ -669,7 +673,8 @@ class _ProfileScreenState extends State<ProfileScreen> with WidgetsBindingObserv
                     showProgress: false,
                     showWeek: false,
                     passesLeft: _passesLeft,
-                    monitoring: ScreenTime.supported ? _monitoring : null,
+                    monitoring:
+                        ScreenTime.supported ? _monitoring : null,
                     stale: _stale,
                     countingSince: _countingSince,
                     dayState: _dayState,

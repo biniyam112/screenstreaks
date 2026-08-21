@@ -13,6 +13,10 @@ abstract class Repository {
   /// Sign in with Google. Returns the signed-in profile.
   Future<Profile> signInWithGoogle();
 
+  /// The signed-in account's id, for things that must be per-account rather
+  /// than per-device.
+  String? get currentUserId => null;
+
   /// The signed-in account's email, for showing in settings.
   String? get currentEmail => null;
 
@@ -84,6 +88,14 @@ abstract class Repository {
   /// Record how many apps and categories are being watched, so friends can
   /// see thin coverage.
   Future<void> setTrackedCounts(int apps, int categories) async {}
+
+  /// Whether this account has been through setup. Decided server-side
+  /// rather than by whether a name exists — Google supplies one at sign-in,
+  /// which made new accounts look already set up.
+  Future<bool> hasOnboarded() async => true;
+
+  /// Mark setup complete.
+  Future<void> markOnboarded() async {}
 
   /// Rename a group you administer.
   Future<void> renameGroup(String groupId, String name) =>

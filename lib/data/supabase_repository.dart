@@ -722,4 +722,27 @@ class SupabaseRepository implements Repository {
       'tracked_categories': categories,
     }).eq('id', userId);
   }
+
+  @override
+  Future<bool> hasOnboarded() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+    final row = await _supabase
+        .from('profiles')
+        .select('onboarded_at')
+        .eq('id', userId)
+        .maybeSingle();
+    return row?['onboarded_at'] != null;
+  }
+
+  @override
+  Future<void> markOnboarded() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    await _supabase.from('profiles').update(
+        {'onboarded_at': DateTime.now().toIso8601String()}).eq('id', userId);
+  }
+
+  @override
+  String? get currentUserId => _supabase.auth.currentUser?.id;
 }

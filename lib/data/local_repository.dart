@@ -491,4 +491,13 @@ class LocalRepository implements Repository {
 
   @override
   Future<void> setTrackedCounts(int apps, int categories) async {}
+
+  @override
+  Future<bool> hasOnboarded() async => true;
+
+  @override
+  Future<void> markOnboarded() async {}
+
+  @override
+  String? get currentUserId => null;
 }
