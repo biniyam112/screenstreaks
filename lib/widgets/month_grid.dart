@@ -126,14 +126,16 @@ class _Cell extends StatelessWidget {
       // No data — nothing exists for this day anywhere.
       fill = context.cDivider.withValues(alpha: 0.22);
       text = context.cTextTer;
+    } else if (record!.limitMet) {
+      // Checked before partial: spending a pass sets this, and a pass should
+      // make any day green — only green keeps a streak alive.
+      fill = context.cGoodFill.withValues(alpha: 0.85);
+      text = Colors.white;
     } else if (record!.partial) {
       // Tracking was off, so the day can't be judged either way. Warmer
       // than "no data" so the two are actually distinguishable.
       fill = const Color(0xFF6E635C).withValues(alpha: 0.55);
       text = Colors.white.withValues(alpha: 0.75);
-    } else if (record!.limitMet) {
-      fill = context.cGoodFill.withValues(alpha: 0.85);
-      text = Colors.white;
     } else {
       fill = context.cBadFill.withValues(alpha: 0.75);
       text = Colors.white;
